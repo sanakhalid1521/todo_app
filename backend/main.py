@@ -1,8 +1,8 @@
 """Main FastAPI application."""
 from fastapi import FastAPI
 
-from .api.todos import router as todos_router
-from .database import init_db
+from api.todos import router as todos_router
+from database import init_db
 
 app = FastAPI(
     title="Todo API",
