@@ -4,9 +4,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import get_async_session
-from backend.crud.todo import todo_crud
-from backend.schemas.todo import (
+from ..database import get_async_session
+from ..crud.todo import todo_crud
+from ..schemas.todo import (
     TodoCreate,
     TodoUpdate,
     TodoResponse,
