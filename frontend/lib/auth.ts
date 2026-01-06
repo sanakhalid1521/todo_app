@@ -1,4 +1,4 @@
-"""Authentication utilities for the frontend."""
+// Authentication utilities for the frontend.
 
 import { createAuthClient } from "better-auth";
 
