@@ -44,17 +44,22 @@ class TasksAPI {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      headers,
-      ...options,
-    });
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        headers,
+        ...options,
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || `HTTP ${response.status}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || `HTTP ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`API request failed: ${endpoint}`, error);
+      throw error;
     }
-
-    return response.json();
   }
 
   async listTasks(): Promise<Task[]> {
