@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers.todos import router as todos_router
+from api.todos import router as todos_router
 from app.routers.chat import router as chat_router
 from app.routers.tasks import router as tasks_router
 from app.database import create_tables
