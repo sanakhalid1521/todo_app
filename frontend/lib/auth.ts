@@ -1,10 +1,8 @@
 // Authentication utilities for the frontend.
 
-import { createAuthClient } from "better-auth";
+import { authClient } from "better-auth/react";
 
-export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-});
+// Export the authClient directly from better-auth/react
 
 export function getToken(): string | null {
   if (typeof window !== "undefined") {
