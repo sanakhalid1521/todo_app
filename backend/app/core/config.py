@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     BETTER_AUTH_SECRET: str = "your-secret-key-here"
 
     # CORS
-    CORS_ORIGINS: str = "http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,https://*.vercel.app,https://*.vercel.com"
 
     class Config:
         env_file = ".env"

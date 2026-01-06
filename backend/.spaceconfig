@@ -1,0 +1,16 @@
+runtime: python3
+env:
+  - name: DATABASE_URL
+    value: "sqlite:///./todo.db"
+  - name: OPENAI_API_KEY
+    value: ""
+  - name: OPENAI_MODEL
+    value: "gpt-4-turbo-preview"
+
+build:
+  setup_commands:
+    - pip install -r requirements.txt
+
+run:
+  commands:
+    - uvicorn main:app --host 0.0.0.0 --port $PORT

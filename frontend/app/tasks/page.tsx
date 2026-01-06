@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useModal } from "@/context/ModalContext";
 import { useSearch } from "@/context/SearchContext";
+import { tasksAPI } from "@/lib/tasks-api";
 import {
   Plus, Check, Trash2, CheckCircle2, X, Calendar, AlignLeft,
   Filter, CheckSquare, Clock, ListTodo, Eye, TrendingUp, Target, Edit3, Flag, Tag, Search as SearchIcon
@@ -10,81 +11,131 @@ import {
 
 interface Task {
   id: number;
+  user_id: string;
   title: string;
   description: string;
-  dueDate: string;
-  priority: "low" | "medium" | "high";
-  category: string;
   completed: boolean;
-  status: "pending" | "in_progress" | "completed";
+  created_at: string;
+  updated_at: string;
+  dueDate?: string; // Optional field for UI purposes
+  priority?: "low" | "medium" | "high"; // Optional field for UI purposes
+  category?: string; // Optional field for UI purposes
+  status?: "pending" | "in_progress" | "completed"; // Optional field for UI purposes
 }
 
 export default function TasksPage() {
   const { isTaskModalOpen, closeTaskModal, openTaskModal } = useModal();
   const { searchQuery, activeFilter, setActiveFilter } = useSearch();
 
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      title: "System Synchronization",
-      description: "Perform deep sync of core modules with the central server.",
-      dueDate: "2026-01-01T12:00",
-      priority: "high",
-      category: "System",
-      completed: true,
-      status: "completed"
-    },
-    {
-      id: 2,
-      title: "Network Perimeter Check",
-      description: "Verify firewall integrity and scan for unusual traffic patterns.",
-      dueDate: "2026-01-01T14:00",
-      priority: "medium",
-      category: "Security",
-      completed: false,
-      status: "in_progress"
-    },
-    {
-      id: 3,
-      title: "Database Optimization",
-      description: "Index the latest mission logs and clear temporary cache files.",
-      dueDate: "2026-01-01T16:00",
-      priority: "low",
-      category: "Database",
-      completed: false,
-      status: "pending"
-    },
-    {
-      id: 4,
-      title: "Tactical Briefing Preparation",
-      description: "Compile data for the upcoming strategic overview session.",
-      dueDate: "2026-01-02T09:00",
-      priority: "high",
-      category: "Planning",
-      completed: false,
-      status: "pending"
-    },
-    {
-      id: 5,
-      title: "Module Alpha Refactor",
-      description: "Upgrade terminal handling for unicode support and refined UI icons.",
-      dueDate: "2026-01-02T18:00",
-      priority: "medium",
-      category: "Dev",
-      completed: false,
-      status: "in_progress"
-    },
-    {
-      id: 6,
-      title: "Resource Audit",
-      description: "Inventory available server credits and allocated cloud assets.",
-      dueDate: "2026-01-03T10:00",
-      priority: "low",
-      category: "Admin",
-      completed: false,
-      status: "pending"
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      // Fetch tasks from the API
+      const apiTasks = await tasksAPI.listTasks();
+      // Map API response to our Task interface
+      const mappedTasks: Task[] = apiTasks.map(task => ({
+        ...task,
+        dueDate: task.updated_at, // Using updated_at as due date for now
+        priority: "medium", // Default priority since API doesn't have this field
+        category: "General", // Default category since API doesn't have this field
+        status: task.completed ? "completed" : "pending" // Set status based on completion
+      }));
+      setTasks(mappedTasks);
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+      // Fallback to demo tasks if API fails
+      const demoTasks: Task[] = [
+        {
+          id: 1,
+          user_id: 'user-uuid-placeholder',
+          title: "System Synchronization",
+          description: "Perform deep sync of core modules with the central server.",
+          completed: true,
+          created_at: "2026-01-01T10:00:00",
+          updated_at: "2026-01-01T12:00:00",
+          dueDate: "2026-01-01T12:00",
+          priority: "high",
+          category: "System",
+          status: "completed"
+        },
+        {
+          id: 2,
+          user_id: 'user-uuid-placeholder',
+          title: "Network Perimeter Check",
+          description: "Verify firewall integrity and scan for unusual traffic patterns.",
+          completed: false,
+          created_at: "2026-01-01T10:00:00",
+          updated_at: "2026-01-01T12:00:00",
+          dueDate: "2026-01-01T14:00",
+          priority: "medium",
+          category: "Security",
+          status: "in_progress"
+        },
+        {
+          id: 3,
+          user_id: 'user-uuid-placeholder',
+          title: "Database Optimization",
+          description: "Index the latest mission logs and clear temporary cache files.",
+          completed: false,
+          created_at: "2026-01-01T10:00:00",
+          updated_at: "2026-01-01T12:00:00",
+          dueDate: "2026-01-01T16:00",
+          priority: "low",
+          category: "Database",
+          status: "pending"
+        },
+        {
+          id: 4,
+          user_id: 'user-uuid-placeholder',
+          title: "Tactical Briefing Preparation",
+          description: "Compile data for the upcoming strategic overview session.",
+          completed: false,
+          created_at: "2026-01-01T10:00:00",
+          updated_at: "2026-01-01T12:00:00",
+          dueDate: "2026-01-02T09:00",
+          priority: "high",
+          category: "Planning",
+          status: "pending"
+        },
+        {
+          id: 5,
+          user_id: 'user-uuid-placeholder',
+          title: "Module Alpha Refactor",
+          description: "Upgrade terminal handling for unicode support and refined UI icons.",
+          completed: false,
+          created_at: "2026-01-01T10:00:00",
+          updated_at: "2026-01-01T12:00:00",
+          dueDate: "2026-01-02T18:00",
+          priority: "medium",
+          category: "Dev",
+          status: "in_progress"
+        },
+        {
+          id: 6,
+          user_id: 'user-uuid-placeholder',
+          title: "Resource Audit",
+          description: "Inventory available server credits and allocated cloud assets.",
+          completed: false,
+          created_at: "2026-01-01T10:00:00",
+          updated_at: "2026-01-01T12:00:00",
+          dueDate: "2026-01-03T10:00",
+          priority: "low",
+          category: "Admin",
+          status: "pending"
+        }
+      ];
+      setTasks(demoTasks);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
 
@@ -94,38 +145,60 @@ export default function TasksPage() {
   const [newPriority, setNewPriority] = useState<"low" | "medium" | "high">("medium");
   const [newCategory, setNewCategory] = useState("General");
 
-  const saveTask = () => {
+  const saveTask = async () => {
     if (!newTitle.trim()) return;
 
-    if (editingTaskId) {
-      setTasks(tasks.map(t =>
-        t.id === editingTaskId
-          ? { ...t, title: newTitle, description: newDesc, dueDate: newDate, priority: newPriority, category: newCategory }
-          : t
-      ));
-    } else {
-      const newTask: Task = {
-        id: Date.now(),
-        title: newTitle,
-        description: newDesc,
-        dueDate: newDate || new Date().toISOString().slice(0, 16),
-        priority: newPriority,
-        category: newCategory,
-        completed: false,
-        status: "pending"
-      };
-      setTasks([newTask, ...tasks]);
+    try {
+      if (editingTaskId) {
+        // Update existing task via API
+        const updatedTask = await tasksAPI.updateTask(editingTaskId, {
+          title: newTitle,
+          description: newDesc,
+          completed: tasks.find(t => t.id === editingTaskId)?.completed || false
+        });
+        // Update local state with API response
+        setTasks(tasks.map(t =>
+          t.id === editingTaskId
+            ? {
+                ...updatedTask,
+                dueDate: updatedTask.updated_at,
+                priority: t.priority || "medium",
+                category: t.category || "General",
+                status: updatedTask.completed ? "completed" : "pending"
+              }
+            : t
+        ));
+      } else {
+        // Create new task via API
+        const newTaskAPI = await tasksAPI.createTask({
+          title: newTitle,
+          description: newDesc,
+        });
+        // Add to local state with API response
+        const newTask: Task = {
+          ...newTaskAPI,
+          dueDate: newTaskAPI.updated_at,
+          priority: newPriority,
+          category: newCategory,
+          status: newTaskAPI.completed ? "completed" : "pending"
+        };
+        setTasks([newTask, ...tasks]);
+      }
+      handleCloseSidebar();
+      // Reload tasks to sync with API
+      await loadTasks();
+    } catch (error) {
+      console.error('Failed to save task:', error);
     }
-    handleCloseSidebar();
   };
 
   const handleEditClick = (task: Task) => {
     setEditingTaskId(task.id);
     setNewTitle(task.title);
     setNewDesc(task.description);
-    setNewDate(task.dueDate);
-    setNewPriority(task.priority);
-    setNewCategory(task.category);
+    setNewDate(task.dueDate || task.updated_at);
+    setNewPriority(task.priority || "medium");
+    setNewCategory(task.category || "General");
     openTaskModal();
   };
 
@@ -139,20 +212,42 @@ export default function TasksPage() {
     setNewCategory("General");
   };
 
-  const toggleTask = (id: number) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
+  const toggleTask = async (id: number) => {
+    try {
+      // Toggle via API
+      const updatedTask = await tasksAPI.toggleComplete(id);
+      // Update local state with API response
+      setTasks(tasks.map(task =>
+        task.id === id
+          ? {
+              ...updatedTask,
+              dueDate: updatedTask.updated_at,
+              priority: task.priority || "medium",
+              category: task.category || "General",
+              status: updatedTask.completed ? "completed" : "pending"
+            }
+          : task
+      ));
+    } catch (error) {
+      console.error('Failed to toggle task:', error);
+    }
   };
 
-  const deleteTask = (id: number) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  const deleteTask = async (id: number) => {
+    try {
+      // Delete via API
+      await tasksAPI.deleteTask(id);
+      // Update local state
+      setTasks(tasks.filter(task => task.id !== id));
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
   };
 
   const filteredTasks = tasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         task.category.toLowerCase().includes(searchQuery.toLowerCase());
+                         (task.category && task.category.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
@@ -249,13 +344,13 @@ export default function TasksPage() {
                             </div>
                             <div className="flex flex-wrap gap-2 pt-1">
                                 <div className="px-3 py-1.5 bg-white/[0.03] rounded-xl border border-white/5 text-[9px] font-bold uppercase tracking-widest text-indigo-400 flex items-center gap-2 group-hover:bg-indigo-500/10 transition-colors">
-                                    <Tag size={12} /> {task.category}
+                                    <Tag size={12} /> {task.category || 'General'}
                                 </div>
                                 <div className={`px-3 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center gap-2 ${task.priority === 'high' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-white/[0.03] text-gray-500 border border-white/5'}`}>
-                                    <Flag size={12} /> {task.priority}
+                                    <Flag size={12} /> {task.priority || 'medium'}
                                 </div>
                                 <div className="px-3 py-1.5 bg-white/[0.03] rounded-xl border border-white/5 text-[9px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2 ml-auto sm:ml-0">
-                                    <Clock size={12} /> {new Date(task.dueDate).toLocaleDateString()}
+                                    <Clock size={12} /> {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : new Date(task.updated_at).toLocaleDateString()}
                                 </div>
                             </div>
                         </div>
