@@ -5,11 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.todos import router as todos_router
 from api.tasks import router as tasks_router
 from api.auth import router as auth_router
+from app.routers.chat import router as chat_router
 from database import init_db
 
 app = FastAPI(
-    title="Todo API",
-    description="A simple Todo API with FastAPI and PostgreSQL",
+    title="Todo AI Chatbot",
+    description="AI-powered Todo Application with Chat Interface",
     version="1.0.0",
 )
 
@@ -32,6 +33,7 @@ async def startup_event():
 app.include_router(todos_router)
 app.include_router(tasks_router)
 app.include_router(auth_router)
+app.include_router(chat_router)
 
 
 @app.get("/")
