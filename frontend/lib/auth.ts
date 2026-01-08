@@ -1,8 +1,6 @@
 // Authentication utilities for the frontend.
 
-import { authClient } from "better-auth/react";
-
-// Export the authClient directly from better-auth/react
+// Authentication utilities for managing tokens and user data in localStorage/sessionStorage
 
 export function getToken(): string | null {
   if (typeof window !== "undefined") {
