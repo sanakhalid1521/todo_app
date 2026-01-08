@@ -34,10 +34,28 @@ class TasksAPI {
     const { getToken } = await import('./auth');
     const token = getToken();
 
-    const headers: HeadersInit = {
+    // Start with default headers
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
+
+    // Add any provided headers
+    if (options.headers) {
+      if (Array.isArray(options.headers)) {
+        // Handle headers as array of tuples
+        for (const [key, value] of options.headers) {
+          headers[key] = value;
+        }
+      } else if (options.headers instanceof Headers) {
+        // Handle Headers instance
+        for (const [key, value] of options.headers.entries()) {
+          headers[key] = value;
+        }
+      } else {
+        // Handle headers as object
+        Object.assign(headers, options.headers);
+      }
+    }
 
     // Add authorization header if token exists
     if (token) {
