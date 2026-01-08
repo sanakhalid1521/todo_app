@@ -7,24 +7,34 @@ import asyncpg
 from dotenv import load_dotenv
 from sqlmodel import SQLModel
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import text
+import logging
 
 # Load environment variables from .env file
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+load_dotenv(".env")  # Simplified for direct execution
 
 # Database connection string from .env
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set")
 
-# Convert to async URL for asyncpg (remove sslmode from URL, add separately)
-ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("?sslmode=require", "")
+if not DATABASE_URL:
+    # Fallback to SQLite for development if no DATABASE_URL is set
+    DATABASE_URL = "sqlite:///./todo_dev.db"
+    logging.warning("DATABASE_URL not set, using SQLite for development")
+
+# Convert to async URL for asyncpg if using PostgreSQL
+if DATABASE_URL.startswith("postgresql://"):
+    ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+    ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("?sslmode=require", "")
+else:
+    # For SQLite, use the same URL
+    ASYNC_DATABASE_URL = DATABASE_URL
 
 # Create async engine for SQLModel
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
     echo=True,
-    connect_args={"ssl": "require"}
+    # Add connect_args only for PostgreSQL
+    connect_args={"ssl": "require"} if DATABASE_URL.startswith("postgresql://") else {}
 )
 
 
@@ -44,13 +54,24 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def test_connection() -> bool:
-    """Test database connection using raw asyncpg."""
+    """Test database connection."""
     try:
-        conn = await asyncpg.connect(DATABASE_URL)
-        version = await conn.fetchval("SELECT version()")
-        await conn.close()
-        print("[OK] Database connected successfully!")
-        print(f"    PostgreSQL Version: {version}")
+        if DATABASE_URL.startswith("postgresql://"):
+            # Test PostgreSQL connection
+            import asyncpg
+            conn = await asyncpg.connect(DATABASE_URL)
+            version = await conn.fetchval("SELECT version()")
+            await conn.close()
+            print("[OK] PostgreSQL database connected successfully!")
+            print(f"    PostgreSQL Version: {version}")
+        else:
+            # Test SQLite connection using SQLAlchemy
+            from sqlalchemy import create_engine
+            engine = create_engine(DATABASE_URL)
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT 1"))
+                print("[OK] SQLite database connected successfully!")
+
         return True
     except Exception as e:
         print(f"[FAIL] Database connection failed: {e}")
@@ -59,9 +80,14 @@ async def test_connection() -> bool:
 
 @asynccontextmanager
 async def get_db_connection() -> AsyncGenerator[asyncpg.Connection, None]:
-    """Get raw asyncpg connection for direct queries."""
-    conn = await asyncpg.connect(DATABASE_URL)
-    try:
-        yield conn
-    finally:
-        await conn.close()
+    """Get raw database connection for direct queries."""
+    if DATABASE_URL.startswith("postgresql://"):
+        conn = await asyncpg.connect(DATABASE_URL)
+        try:
+            yield conn
+        finally:
+            await conn.close()
+    else:
+        # For SQLite, we can't use asyncpg, so we'll yield None
+        # In a real application, you'd need to implement a different approach for SQLite
+        yield None

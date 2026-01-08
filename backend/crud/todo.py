@@ -4,8 +4,8 @@ from typing import Optional
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.todo import Todo
-from ..schemas.todo import TodoCreate, TodoUpdate
+from models.todo import Todo
+from schemas.todo import TodoCreate, TodoUpdate
 
 
 class TodoCRUD:

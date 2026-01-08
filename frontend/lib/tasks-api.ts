@@ -65,21 +65,21 @@ class TasksAPI {
   async listTasks(): Promise<Task[]> {
     // Get user ID from auth system
     const { getUserId } = await import('./auth');
-    const userId = getUserId() || 'user-uuid-placeholder';
+    const userId = getUserId() || 'user-demo';
     return this.request<Task[]>(`/api/${userId}/tasks`);
   }
 
   async getTask(taskId: number): Promise<Task> {
     // Get user ID from auth system
     const { getUserId } = await import('./auth');
-    const userId = getUserId() || 'user-uuid-placeholder';
+    const userId = getUserId() || 'user-demo';
     return this.request<Task>(`/api/${userId}/tasks/${taskId}`);
   }
 
   async createTask(data: CreateTaskRequest): Promise<Task> {
     // Get user ID from auth system
     const { getUserId } = await import('./auth');
-    const userId = getUserId() || 'user-uuid-placeholder';
+    const userId = getUserId() || 'user-demo';
     return this.request<Task>(`/api/${userId}/tasks`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -89,7 +89,7 @@ class TasksAPI {
   async updateTask(taskId: number, data: UpdateTaskRequest): Promise<Task> {
     // Get user ID from auth system
     const { getUserId } = await import('./auth');
-    const userId = getUserId() || 'user-uuid-placeholder';
+    const userId = getUserId() || 'user-demo';
     return this.request<Task>(`/api/${userId}/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -99,7 +99,7 @@ class TasksAPI {
   async deleteTask(taskId: number): Promise<{ success: boolean }> {
     // Get user ID from auth system
     const { getUserId } = await import('./auth');
-    const userId = getUserId() || 'user-uuid-placeholder';
+    const userId = getUserId() || 'user-demo';
     return this.request<{ success: boolean }>(`/api/${userId}/tasks/${taskId}`, {
       method: 'DELETE',
     });
@@ -108,7 +108,7 @@ class TasksAPI {
   async toggleComplete(taskId: number): Promise<Task> {
     // Get user ID from auth system
     const { getUserId } = await import('./auth');
-    const userId = getUserId() || 'user-uuid-placeholder';
+    const userId = getUserId() || 'user-demo';
     return this.request<Task>(`/api/${userId}/tasks/${taskId}/toggle`, {
       method: 'PATCH',
     });

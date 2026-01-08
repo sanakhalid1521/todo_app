@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Chatbot from "@/components/Chatbot";
 import { ModalProvider } from "@/context/ModalContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { SearchProvider } from "@/context/SearchContext";
@@ -23,6 +24,7 @@ export default function RootLayout({
             <ModalProvider>
               <Navbar />
               {children}
+              <Chatbot />
             </ModalProvider>
           </SearchProvider>
         </AuthProvider>
