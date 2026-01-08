@@ -1,53 +1,122 @@
----
-title: Todo AI Chatbot
-emoji: 🤖
-colorFrom: purple
-colorTo: blue
-sdk: docker
-pinned: false
-license: mit
----
+# Todo App - 5-Phase Evolution Project
 
-# Todo AI Chatbot
+This project implements the complete 5-phase evolution as outlined in Hackathon II, transforming from a simple console application to a cloud-native AI-powered system.
 
-An AI-powered Todo application with natural language processing capabilities.
+## Project Structure
 
-## Features
+```
+hackathon-todo/
+├── .specify/           # Spec-Kit configuration
+│   └── config.yaml
+├── specs/             # Spec-Kit managed specifications
+│   ├── overview.md
+│   ├── architecture.md
+│   ├── features/
+│   │   ├── task-crud.md
+│   │   ├── authentication.md
+│   │   └── chatbot.md
+│   ├── api/
+│   │   └── rest-endpoints.md
+│   ├── database/
+│   │   └── schema.md
+│   └── ui/
+│       ├── components.md
+│       └── pages.md
+├── .claude/           # Reusable intelligence (agents and skills)
+│   ├── agents/
+│   └── skills/
+├── frontend/          # Next.js application
+│   ├── app/
+│   ├── components/
+│   ├── lib/
+│   └── ...
+├── backend/           # FastAPI application
+│   ├── api/
+│   ├── crud/
+│   ├── schemas/
+│   ├── database.py
+│   └── main.py
+├── CLAUDE.md          # Claude Code instructions
+├── docker-compose.yml
+└── README.md
+```
 
-- Natural language task management
-- AI assistant for creating, updating, and managing tasks
-- Real-time chat interface
-- PostgreSQL database integration
+## Phases
+
+### Phase I: In-Memory Python Console App
+- Basic todo functionality in Python console
+- In-memory storage
+- Core CRUD operations
+
+### Phase II: Full-Stack Web Application (Current)
+- Next.js frontend with App Router
+- FastAPI backend with SQLModel
+- Neon Serverless Database
+- Complete task management features
+
+### Phase III: AI-Powered Todo Chatbot
+- Natural language processing
+- OpenAI ChatKit integration
 - Conversational task management
 
-## Usage
+### Phase IV: Local Kubernetes Deployment
+- Containerization with Docker
+- Local deployment on Minikube
+- Helm charts for orchestration
 
-1. Type your task in natural language (e.g., "Add a task to buy groceries")
-2. The AI assistant will create, update, or manage tasks based on your input
-3. Ask questions like "Show my tasks" or "Mark task 1 as complete"
+### Phase V: Advanced Cloud Deployment
+- Production deployment on DigitalOcean Kubernetes
+- Event-driven architecture with Kafka and Dapr
 
-## Environment Variables
+## Features Implemented (Phase II)
 
-To run this application, you'll need the following environment variables:
+### Basic Features
+- [x] Add Task – Create new todo items
+- [x] Delete Task – Remove tasks from the list
+- [x] Update Task – Modify existing task details
+- [x] View Task List – Display all tasks
+- [x] Mark as Complete – Toggle task completion status
 
-- `DATABASE_URL`: PostgreSQL database URL
-- `OPENAI_API_KEY`: OpenAI API key (optional, uses mock agent if not provided)
-- `OPENAI_MODEL`: OpenAI model to use (default: gpt-4-turbo-preview)
+### Intermediate Features
+- [x] Priorities & Tags/Categories – Assign levels and labels
+- [x] Search & Filter – Search by keyword; filter by status
+- [x] Sort Tasks – Reorder by due date, priority, or alphabetically
 
-## API Endpoints
+### Advanced Features
+- [x] Due Dates & Time Reminders – Set deadlines with date/time pickers
+- [ ] Recurring Tasks – Auto-reschedule repeating tasks
 
-- `/chat` - Chat with the AI assistant
-- `/chat/conversations` - List conversations
-- `/api/{user_id}/tasks` - Task management API
+## Technology Stack
 
-## Built With
+### Frontend
+- Next.js 14+ (App Router)
+- TypeScript
+- Tailwind CSS
+- Lucide React Icons
 
+### Backend
 - FastAPI
 - SQLModel
-- OpenAI Assistant API
-- React/Next.js (frontend)
-- PostgreSQL
+- SQLAlchemy
+- Pydantic
 
-## License
+### Database
+- Neon Serverless PostgreSQL
+- UUID primary keys
+- AsyncSession for database operations
 
-MIT
+### Development
+- Spec-Driven Development
+- Claude Code integration
+- Reusable Intelligence (Agents & Skills)
+
+## Getting Started
+
+1. Clone the repository
+2. Navigate to the frontend directory and install dependencies: `npm install`
+3. Navigate to the backend directory and install dependencies: `pip install -r requirements.txt`
+4. Start the development servers for both frontend and backend
+
+## Development Guidelines
+
+This project follows spec-driven development methodology. All implementations should reference the specifications in the `/specs` directory. When implementing new features, follow the established patterns and maintain consistency with the existing architecture.

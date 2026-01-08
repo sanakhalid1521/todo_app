@@ -1,0 +1,70 @@
+# Spec Kit Configuration for Todo App Project
+
+project:
+  name: "Todo App Evolution"
+  description: "5-phase evolution from console app to cloud-native AI system"
+  version: "1.0.0"
+
+specification:
+  root: "./specs"
+  patterns:
+    - "**/*.md"
+    - "!node_modules/**"
+    - "!**/venv/**"
+    - "!**/__pycache__/**"
+
+integration:
+  claude:
+    enabled: true
+    config_file: "./CLAUDE.md"
+
+phases:
+  - name: "Phase I"
+    description: "In-Memory Python Console App"
+    tech_stack: ["Python", "Console"]
+    points: 100
+
+  - name: "Phase II"
+    description: "Full-Stack Web Application"
+    tech_stack: ["Next.js", "FastAPI", "SQLModel", "Neon DB"]
+    points: 150
+
+  - name: "Phase III"
+    description: "AI-Powered Todo Chatbot"
+    tech_stack: ["OpenAI ChatKit", "Agents SDK", "MCP SDK"]
+    points: 200
+
+  - name: "Phase IV"
+    description: "Local Kubernetes Deployment"
+    tech_stack: ["Docker", "Minikube", "Helm", "kubectl-ai"]
+    points: 250
+
+  - name: "Phase V"
+    description: "Advanced Cloud Deployment"
+    tech_stack: ["Kafka", "Dapr", "DigitalOcean DOKS"]
+    points: 300
+
+features:
+  basic:
+    - "Add Task"
+    - "Delete Task"
+    - "Update Task"
+    - "View Task List"
+    - "Mark as Complete"
+
+  intermediate:
+    - "Priorities & Tags/Categories"
+    - "Search & Filter"
+    - "Sort Tasks"
+
+  advanced:
+    - "Recurring Tasks"
+    - "Due Dates & Time Reminders"
+    - "AI Natural Language Processing"
+
+hooks:
+  pre_commit:
+    - "validate-specs"
+    - "check-phase-requirements"
+  post_commit:
+    - "update-phase-progress"
