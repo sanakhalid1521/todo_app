@@ -1,7 +1,6 @@
 """Todo SQLModel for database persistence."""
 from datetime import datetime
 from typing import Optional
-from uuid import uuid4
 
 from sqlmodel import Field, SQLModel
 
@@ -9,11 +8,7 @@ from sqlmodel import Field, SQLModel
 class Todo(SQLModel, table=True):
     """Todo model representing a task in the database."""
 
-    id: Optional[str] = Field(
-        default_factory=lambda: str(uuid4()),
-        primary_key=True,
-        max_length=36,
-    )
+    id: Optional[int] = Field(default=None, primary_key=True)
     title: str = Field(min_length=3, max_length=100)
     description: str = Field(min_length=5, max_length=500)
     completed: bool = Field(default=False)

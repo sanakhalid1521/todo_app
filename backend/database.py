@@ -29,6 +29,12 @@ else:
     # For SQLite, use the same URL
     ASYNC_DATABASE_URL = DATABASE_URL
 
+# Import all models so they are registered with SQLModel
+from models.todo import Todo
+from app.models.task import Task
+from app.models.conversation import ConversationMessage, ConversationSession
+from app.models.user import User
+
 # Create async engine for SQLModel
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,

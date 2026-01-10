@@ -1,266 +1,115 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, Send, X, Bot, User, CheckCircle2, Trash2 } from "lucide-react";
+import { MessageCircle, Send, X, Bot, User } from "lucide-react";
 import { tasksAPI, Task } from "@/lib/tasks-api";
+
+// Define types for chat messages
+type ChatMessage = {
+  id: number;
+  text: string;
+  sender: "user" | "bot";
+  timestamp: Date;
+};
+
+type ChatResponse = {
+  response: string;
+  session_id: string;
+  timestamp: string;
+};
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Hello! I'm your TodoPro assistant. How can I help you today? Type 'show tasks' to see your tasks, 'add task [name]' to create, 'complete task [name]' to mark done, or 'delete task [name]' to remove.", sender: "bot", timestamp: new Date() }
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { id: 1, text: "Hello! I'm your TodoPro assistant. How can I help you manage your tasks today?", sender: "bot", timestamp: new Date() }
   ]);
   const [inputValue, setInputValue] = useState("");
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(false); // Track loading state
+  const [sessionId, setSessionId] = useState<string | null>(null); // Track session ID
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   const toggleChat = () => {
     setIsOpen(!isOpen);
   };
 
-  // Function to load tasks
-  const loadTasks = async () => {
+  // Function to send message to the AI chatbot backend
+  const sendMessageToBackend = async (message: string) => {
     try {
-      const loadedTasks = await tasksAPI.listTasks();
-      setTasks(loadedTasks);
+      const response = await fetch('/api/chat/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          user_id: 'user-demo', // In a real app, this would come from auth context
+          session_id: sessionId || undefined
+        }),
+      });
 
-      // Add response message
-      const responseText = loadedTasks.length > 0
-        ? `You have ${loadedTasks.length} tasks:\n${loadedTasks.slice(0, 5).map(t => `- ${t.title} (${t.completed ? '✓ Completed' : '○ Pending'})`).join('\n')}${loadedTasks.length > 5 ? '\n...and more' : ''}`
-        : "You don't have any tasks yet. Type 'add task [name]' to create one!";
-
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: responseText,
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
-    } catch (error) {
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: "Sorry, I couldn't load your tasks. Please try again later.",
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
-    }
-  };
-
-  // Function to add a task
-  const addTask = async (title: string, description: string = "Added via chatbot") => {
-    try {
-      const newTask = await tasksAPI.createTask({ title, description });
-      setTasks(prev => [...prev, newTask]);
-
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: `Task "${title}" has been added successfully!`,
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
-    } catch (error) {
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: `Sorry, I couldn't add the task. Error: ${(error as Error).message}`,
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
-    }
-  };
-
-  // Function to complete a task
-  const completeTask = async (taskTitle: string) => {
-    try {
-      const taskToComplete = tasks.find(t => t.title.toLowerCase().includes(taskTitle.toLowerCase()));
-
-      if (!taskToComplete) {
-        // Try to find in API directly if not in local state
-        const allTasks = await tasksAPI.listTasks();
-        const task = allTasks.find(t => t.title.toLowerCase().includes(taskTitle.toLowerCase()));
-
-        if (!task) {
-          const newBotMessage = {
-            id: messages.length + 1,
-            text: `I couldn't find a task with "${taskTitle}". Try showing tasks first with 'show tasks'.`,
-            sender: "bot",
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, newBotMessage]);
-          return;
-        }
-
-        const updatedTask = await tasksAPI.toggleComplete(task.id);
-        setTasks(prev => prev.map(t => t.id === task.id ? updatedTask : t));
-
-        const newBotMessage = {
-          id: messages.length + 1,
-          text: `Task "${task.title}" has been marked as completed!`,
-          sender: "bot",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, newBotMessage]);
-        return;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const updatedTask = await tasksAPI.toggleComplete(taskToComplete.id);
-      setTasks(prev => prev.map(t => t.id === taskToComplete.id ? updatedTask : t));
+      const data: ChatResponse = await response.json();
 
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: `Task "${taskToComplete.title}" has been marked as completed!`,
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
-    } catch (error) {
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: `Sorry, I couldn't complete the task. Error: ${(error as Error).message}`,
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
-    }
-  };
-
-  // Function to delete a task
-  const deleteTask = async (taskTitle: string) => {
-    try {
-      const taskToDelete = tasks.find(t => t.title.toLowerCase().includes(taskTitle.toLowerCase()));
-
-      if (!taskToDelete) {
-        // Try to find in API directly if not in local state
-        const allTasks = await tasksAPI.listTasks();
-        const task = allTasks.find(t => t.title.toLowerCase().includes(taskTitle.toLowerCase()));
-
-        if (!task) {
-          const newBotMessage = {
-            id: messages.length + 1,
-            text: `I couldn't find a task with "${taskTitle}". Try showing tasks first with 'show tasks'.`,
-            sender: "bot",
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, newBotMessage]);
-          return;
-        }
-
-        await tasksAPI.deleteTask(task.id);
-        setTasks(prev => prev.filter(t => t.id !== task.id));
-
-        const newBotMessage = {
-          id: messages.length + 1,
-          text: `Task "${task.title}" has been deleted!`,
-          sender: "bot",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, newBotMessage]);
-        return;
+      // Update session ID if this is the first message in the session
+      if (!sessionId) {
+        setSessionId(data.session_id);
       }
 
-      await tasksAPI.deleteTask(taskToDelete.id);
-      setTasks(prev => prev.filter(t => t.id !== taskToDelete.id));
-
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: `Task "${taskToDelete.title}" has been deleted!`,
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
+      return data.response;
     } catch (error) {
-      const newBotMessage = {
-        id: messages.length + 1,
-        text: `Sorry, I couldn't delete the task. Error: ${(error as Error).message}`,
-        sender: "bot",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, newBotMessage]);
+      console.error("Failed to send message to chatbot:", error);
+      return "Sorry, I encountered an error processing your request. Please try again.";
     }
   };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isLoading) return;
 
-    // Add user message
-    const newUserMessage = {
+    const userMessage = inputValue.trim();
+
+    // Add user message to UI immediately
+    const newUserMessage: ChatMessage = {
       id: messages.length + 1,
-      text: inputValue,
+      text: userMessage,
       sender: "user",
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, newUserMessage]);
-    const userMessage = inputValue.toLowerCase().trim();
     setInputValue("");
+    setIsLoading(true);
 
-    // Handle different commands
-    if (userMessage.includes('show') && userMessage.includes('task')) {
-      await loadTasks();
-    } else if (userMessage.includes('add') && userMessage.includes('task')) {
-      // Extract task title from message
-      const titleMatch = inputValue.match(/(?:add task|task to add|create task)\s+(.+)/i);
-      if (titleMatch && titleMatch[1]) {
-        await addTask(titleMatch[1].trim());
-      } else {
-        // Ask for task details
-        const newBotMessage = {
-          id: messages.length + 2,
-          text: "What would you like to name your new task?",
-          sender: "bot",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, newBotMessage]);
-      }
-    } else if ((userMessage.includes('complete') || userMessage.includes('finish') || userMessage.includes('done')) && userMessage.includes('task')) {
-      // Extract task title from message
-      const titleMatch = inputValue.match(/(?:complete task|finish task|done task|mark as done)\s+(.+)/i);
-      if (titleMatch && titleMatch[1]) {
-        await completeTask(titleMatch[1].trim());
-      } else {
-        // Ask for task details
-        const newBotMessage = {
-          id: messages.length + 2,
-          text: "Which task would you like to mark as complete? Please provide the task name.",
-          sender: "bot",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, newBotMessage]);
-      }
-    } else if ((userMessage.includes('delete') || userMessage.includes('remove')) && userMessage.includes('task')) {
-      // Extract task title from message
-      const titleMatch = inputValue.match(/(?:delete task|remove task)\s+(.+)/i);
-      if (titleMatch && titleMatch[1]) {
-        await deleteTask(titleMatch[1].trim());
-      } else {
-        // Ask for task details
-        const newBotMessage = {
-          id: messages.length + 2,
-          text: "Which task would you like to delete? Please provide the task name.",
-          sender: "bot",
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, newBotMessage]);
-      }
-    } else if (userMessage.includes('hello') || userMessage.includes('hi')) {
-      const newBotMessage = {
+    try {
+      // Send message to backend and get AI response
+      const aiResponse = await sendMessageToBackend(userMessage);
+
+      // Add AI response to UI
+      const newBotMessage: ChatMessage = {
         id: messages.length + 2,
-        text: "Hello! How can I help you with your tasks today? You can ask me to show tasks, add a new task, complete a task, or delete a task.",
+        text: aiResponse,
         sender: "bot",
         timestamp: new Date()
       };
+
       setMessages(prev => [...prev, newBotMessage]);
-    } else {
-      // Default response
-      const newBotMessage = {
+    } catch (error) {
+      console.error("Error handling message:", error);
+
+      // Add error message to UI
+      const errorMessage: ChatMessage = {
         id: messages.length + 2,
-        text: "I can help you manage your tasks! You can ask me to:\n- Show your tasks (type 'show tasks')\n- Add a new task (type 'add task [name]')\n- Complete a task (type 'complete task [name]')\n- Delete a task (type 'delete task [name]')",
+        text: "Sorry, I encountered an error processing your request. Please try again.",
         sender: "bot",
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, newBotMessage]);
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -331,6 +180,18 @@ export default function Chatbot() {
                 </div>
               </div>
             ))}
+
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Bot size={14} className="mt-0.5 flex-shrink-0 text-indigo-400" />
+                    <div className="text-sm">Thinking...</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -344,18 +205,23 @@ export default function Chatbot() {
                 placeholder="Ask me to show/add/complete/delete tasks..."
                 className="flex-1 bg-gray-700 border border-gray-600 rounded-xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 aria-label="Type your message"
+                disabled={isLoading}
               />
               <button
                 type="submit"
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isLoading}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  inputValue.trim()
+                  inputValue.trim() && !isLoading
                     ? "bg-indigo-600 text-white hover:bg-indigo-700"
                     : "bg-gray-700 text-gray-500 cursor-not-allowed"
                 } transition-colors`}
                 aria-label="Send message"
               >
-                <Send size={16} />
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send size={16} />
+                )}
               </button>
             </div>
           </form>

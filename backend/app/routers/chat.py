@@ -1,10 +1,14 @@
-"""Chat router for AI chatbot functionality."""
-from fastapi import APIRouter
+"""Chat router for AI chatbot functionality using MCP and OpenAI Agents SDK."""
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 import uuid
 from datetime import datetime
-import re
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import get_async_session
+from app.services.conversations import ConversationService
+from app.models.conversation import ConversationRole
+from app.agents.todo_agent import todo_agent
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
 
@@ -18,131 +22,118 @@ class ChatResponse(BaseModel):
     session_id: str
     timestamp: str
 
-# Simple in-memory storage for conversation history (in production, use database)
-conversation_history = {}
+class Message(BaseModel):
+    role: str
+    content: str
 
-async def process_chat_command(message: str, user_id: Optional[str] = None):
-    """Process chat commands and interact with todo functionality."""
-    message_lower = message.lower().strip()
-
-    # Handle different commands
-    if 'show' in message_lower and ('task' in message_lower or 'todo' in message_lower):
-        if user_id:
-            # In a real implementation, this would call the API to get user tasks
-            # For now, return a helpful response
-            return ("I can see you want to view your tasks. "
-                   "Please go to the tasks page to see your list of tasks, "
-                   "or use commands like 'add task [name]' to create new ones.")
-        else:
-            return "Please log in to view your tasks."
-
-    elif 'add' in message_lower and ('task' in message_lower or 'todo' in message_lower):
-        # Extract task title from message using regex
-        match = re.search(r'(?:add task|task to add|create task|add todo|todo to add|create todo)\s+(.+)', message, re.IGNORECASE)
-        if match and match.group(1):
-            task_title = match.group(1).strip()
-            if user_id and len(task_title) > 0:
-                return f"Task '{task_title}' has been added successfully! You can view it in your tasks list."
-            else:
-                return "Please log in to add tasks."
-        else:
-            return "Please specify the task you want to add. Example: 'add task buy groceries'"
-
-    elif ('complete' in message_lower or 'finish' in message_lower or 'done' in message_lower) and ('task' in message_lower or 'todo' in message_lower):
-        # Extract task identifier
-        match = re.search(r'(?:complete task|finish task|done task|mark as done|complete todo|finish todo|done todo|mark todo as done)\s+(.+)', message, re.IGNORECASE)
-        if match and match.group(1):
-            task_identifier = match.group(1).strip()
-            if user_id and len(task_identifier) > 0:
-                return f"I've marked the task '{task_identifier}' as completed! Good job!"
-            else:
-                return "Please log in to complete tasks."
-        else:
-            return "Please specify which task you want to complete. Example: 'complete task buy groceries'"
-
-    elif ('delete' in message_lower or 'remove' in message_lower) and ('task' in message_lower or 'todo' in message_lower):
-        # Extract task identifier
-        match = re.search(r'(?:delete task|remove task|delete todo|remove todo)\s+(.+)', message, re.IGNORECASE)
-        if match and match.group(1):
-            task_identifier = match.group(1).strip()
-            if user_id and len(task_identifier) > 0:
-                return f"I've deleted the task '{task_identifier}' from your list."
-            else:
-                return "Please log in to delete tasks."
-        else:
-            return "Please specify which task you want to delete. Example: 'delete task buy groceries'"
-
-    elif 'hello' in message_lower or 'hi ' in message_lower or message_lower == 'hi' or message_lower.startswith('hello'):
-        return ("Hello! I'm your TodoPro assistant. I can help you manage your tasks! "
-                "You can ask me to:\n"
-                "- Show your tasks (type 'show tasks')\n"
-                "- Add a new task (type 'add task [name]')\n"
-                "- Complete a task (type 'complete task [name]')\n"
-                "- Delete a task (type 'delete task [name]')")
-
-    else:
-        # Default response for unrecognized commands
-        return ("I can help you manage your tasks! You can ask me to:\n"
-                "- Show your tasks (type 'show tasks')\n"
-                "- Add a new task (type 'add task [name]')\n"
-                "- Complete a task (type 'complete task [name]')\n"
-                "- Delete a task (type 'delete task [name]')")
+class ChatSessionResponse(BaseModel):
+    session_id: str
+    messages: List[Message]
+    message_count: int
 
 @router.post("/message")
-async def chat_message(chat_request: ChatRequest):
-    """Handle a chat message and return AI response."""
-    # Create session ID if not provided
+async def chat_message(
+    chat_request: ChatRequest,
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Handle a chat message and return AI response using MCP tools."""
+    # Validate user_id
+    if not chat_request.user_id:
+        user_id = "user-demo"  # Default user for demo purposes
+    else:
+        user_id = chat_request.user_id
+
+    # Get or create session ID
     session_id = chat_request.session_id or str(uuid.uuid4())
 
-    # Store conversation in memory (in production, use database)
-    if session_id not in conversation_history:
-        conversation_history[session_id] = []
+    # Create or get conversation session
+    conversation_session = await ConversationService.get_conversation_session(db, session_id)
+    if not conversation_session:
+        conversation_session = await ConversationService.create_conversation_session(
+            db, user_id, f"Conversation {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        )
 
-    # Add user message to history
-    conversation_history[session_id].append({
-        "role": "user",
-        "content": chat_request.message,
-        "timestamp": datetime.now().isoformat()
-    })
-
-    # Process the message and get response
-    response = await process_chat_command(chat_request.message, chat_request.user_id)
-
-    # Add bot response to history
-    conversation_history[session_id].append({
-        "role": "assistant",
-        "content": response,
-        "timestamp": datetime.now().isoformat()
-    })
-
-    return ChatResponse(
-        response=response,
-        session_id=session_id,
-        timestamp=datetime.now().isoformat()
+    # Add user message to conversation
+    await ConversationService.add_message_to_conversation(
+        db, session_id, ConversationRole.USER, chat_request.message
     )
 
-@router.get("/session/{session_id}")
-async def get_chat_session(session_id: str):
+    # Get conversation history for context
+    messages = await ConversationService.get_conversation_messages(db, session_id)
+    conversation_context = [
+        {"role": msg.role.value, "content": msg.content}
+        for msg in messages
+    ]
+
+    try:
+        # Process the message using the OpenAI agent with MCP tools
+        ai_response = await todo_agent.process_message(
+            message=chat_request.message,
+            user_id=user_id,
+            conversation_history=conversation_context
+        )
+
+        # Add assistant response to conversation
+        await ConversationService.add_message_to_conversation(
+            db, session_id, ConversationRole.ASSISTANT, ai_response
+        )
+
+        return ChatResponse(
+            response=ai_response,
+            session_id=session_id,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        # Handle errors gracefully
+        error_response = f"Sorry, I encountered an error processing your request: {str(e)}"
+
+        # Add error response to conversation
+        await ConversationService.add_message_to_conversation(
+            db, session_id, ConversationRole.ASSISTANT, error_response
+        )
+
+        return ChatResponse(
+            response=error_response,
+            session_id=session_id,
+            timestamp=datetime.now().isoformat()
+        )
+
+@router.get("/session/{session_id}", response_model=ChatSessionResponse)
+async def get_chat_session(
+    session_id: str,
+    db: AsyncSession = Depends(get_async_session)
+):
     """Get a specific chat session."""
-    if session_id in conversation_history:
-        return {
-            "session_id": session_id,
-            "messages": conversation_history[session_id],
-            "message_count": len(conversation_history[session_id])
-        }
-    else:
-        return {
-            "session_id": session_id,
-            "messages": [],
-            "message_count": 0
-        }
+    messages = await ConversationService.get_conversation_messages(db, session_id)
+
+    chat_messages = [
+        Message(role=msg.role.value, content=msg.content)
+        for msg in messages
+    ]
+
+    return ChatSessionResponse(
+        session_id=session_id,
+        messages=chat_messages,
+        message_count=len(chat_messages)
+    )
 
 @router.get("/history")
-async def get_chat_history():
-    """Get chat history statistics."""
-    # Return conversation history statistics
+async def get_chat_history(
+    user_id: str,
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Get chat history for a user."""
+    user_sessions = await ConversationService.get_user_conversations(db, user_id)
+
     return {
-        "sessions": list(conversation_history.keys()),
-        "total_sessions": len(conversation_history),
-        "active_sessions": len([k for k, v in conversation_history.items() if len(v) > 0])
+        "sessions": [
+            {
+                "session_id": session.session_id,
+                "title": session.title,
+                "created_at": session.created_at.isoformat(),
+                "updated_at": session.updated_at.isoformat()
+            }
+            for session in user_sessions
+        ],
+        "total_sessions": len(user_sessions)
     }
