@@ -21,11 +21,12 @@ type ChatResponse = {
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 1, text: "Hello! I'm your TodoPro assistant. How can I help you manage your tasks today?", sender: "bot", timestamp: new Date() }
+    { id: 1, text: "Hello! I'm your TodoPro assistant. I can help you manage your tasks using natural language. Try commands like:\n- \"Add a task to buy groceries\"\n- \"Show my tasks\"\n- \"Complete task 1\"\n- \"Delete task 2\"", sender: "bot", timestamp: new Date() }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false); // Track loading state
   const [sessionId, setSessionId] = useState<string | null>(null); // Track session ID
+  const [errorCount, setErrorCount] = useState(0); // Track error count
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   const toggleChat = () => {
@@ -58,9 +59,15 @@ export default function Chatbot() {
         setSessionId(data.session_id);
       }
 
+      // Reset error count on successful response
+      if (errorCount > 0) {
+        setErrorCount(0);
+      }
+
       return data.response;
     } catch (error) {
       console.error("Failed to send message to chatbot:", error);
+      setErrorCount(prev => prev + 1); // Increment error count
       return "Sorry, I encountered an error processing your request. Please try again.";
     }
   };
@@ -128,9 +135,11 @@ export default function Chatbot() {
           aria-label="Open chat"
         >
           <MessageCircle size={24} />
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white animate-pulse">
-            1
-          </span>
+          {errorCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white animate-pulse">
+              {errorCount}
+            </span>
+          )}
         </button>
       )}
 

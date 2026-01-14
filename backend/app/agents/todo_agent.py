@@ -143,13 +143,37 @@ class TodoAgent:
         list_task_patterns = [
             "show tasks", "list tasks", "my tasks", "tasks dikhao", "task dikhao",
             "dekhna hai", "dikhao mujhe", "mera tasks", "task list", "list dekhni hai",
-            "mjhe task ki list dikhao", "meri task list", "tasks show kro", "tasks show karo"
+            "mjhe task ki list dikhao", "meri task list", "tasks show kro", "tasks show karo",
+            "show my task", "show me tasks", "show task", "list dekhni", "task list dekhni",
+            "mujhe task", "task dekhni", "dekhna chahti hun", "kya hai meri list"
+        ]
+
+        # Pending/Incomplete tasks patterns
+        pending_task_patterns = [
+            "pending task", "pending tasks", "incomplete tasks", "todo tasks", "kam pending hai",
+            "kya pending hai", "pending dekhao", "pending dikhao", "task pending", "pending list",
+            "incomplete", "todo", "krna hai", "abhi baki hai", "baki task", "remaining task"
+        ]
+
+        # Completed tasks patterns
+        completed_task_patterns = [
+            "completed task", "completed tasks", "done tasks", "finished tasks", "hogye task",
+            "ho gaye task", "completed dekhao", "done dekhao", "khtm tasks", "finish dekhna",
+            "kya kiya hai", "completed list", "done list", "finished list"
         ]
 
         # Complete/Done patterns
         complete_patterns = [
             "complete", "done", "hogya", "ho gaya", "mark complete", "task complete",
-            "finish", "khtm", "khatam", "kr diya", "kar diya"
+            "finish", "khtm", "khatam", "kr diya", "kar diya", "completed", "task complete kro",
+            "task complete karo", "task hogya", "task ho gaya", "task khtm", "task finish"
+        ]
+
+        # Delete/Remove patterns
+        delete_patterns = [
+            "delete", "remove", "delete task", "remove task", "task delete", "task remove",
+            "nikal do", "nikal d", "hatado", "hata do", "task delete kro", "task delete karo",
+            "task hatao", "task nikalo", "task hatado", "delete krna", "remove krna"
         ]
 
         # Check for add task patterns
@@ -173,15 +197,84 @@ class TodoAgent:
                 result = await self._execute_mock_tool("list_tasks", {"user_id": user_id})
                 return result
 
+        # Check for pending tasks patterns
+        for pattern in pending_task_patterns:
+            if pattern in message_lower:
+                result = await self._execute_mock_tool("list_tasks", {"user_id": user_id, "completed": False})
+                return result
+
+        # Check for completed tasks patterns
+        for pattern in completed_task_patterns:
+            if pattern in message_lower:
+                result = await self._execute_mock_tool("list_tasks", {"user_id": user_id, "completed": True})
+                return result
+
         # Check for complete task patterns
         for pattern in complete_patterns:
             if pattern in message_lower:
-                # Mock complete task (would require parsing task ID from message)
-                result = "Task marked as completed successfully!"
+                # Extract task ID or title if mentioned in message
+                task_identifier = self._extract_task_identifier(message_lower, complete_patterns)
+
+                if task_identifier:
+                    # If it's numeric, treat as ID; otherwise, find task by title
+                    if task_identifier.isdigit():
+                        result = await self._execute_mock_tool("toggle_task_completion", {"user_id": user_id, "task_id": int(task_identifier)})
+                    else:
+                        # For mock purposes, we'll just confirm the action
+                        result = await self._execute_mock_tool("toggle_task_completion", {"user_id": user_id})
+                else:
+                    # Default to toggle (would need to show user tasks to pick which one to complete)
+                    result = await self._execute_mock_tool("toggle_task_completion", {"user_id": user_id})
+                return result
+
+        # Check for delete task patterns
+        for pattern in delete_patterns:
+            if pattern in message_lower:
+                # Extract task ID or title if mentioned in message
+                task_identifier = self._extract_task_identifier(message_lower, delete_patterns)
+
+                if task_identifier:
+                    # If it's numeric, treat as ID; otherwise, find task by title
+                    if task_identifier.isdigit():
+                        result = await self._execute_mock_tool("delete_task", {"user_id": user_id, "task_id": int(task_identifier)})
+                    else:
+                        # For mock purposes, we'll just confirm the action
+                        result = await self._execute_mock_tool("delete_task", {"user_id": user_id})
+                else:
+                    # Default delete message
+                    result = await self._execute_mock_tool("delete_task", {"user_id": user_id})
                 return result
 
         # Default response
         return f"I've received your message: '{message}'. I can help you manage tasks like adding, listing, or completing tasks when the AI service is available."
+
+    def _extract_task_identifier(self, message: str, command_patterns: List[str]) -> str:
+        """
+        Extract task identifier (ID or title) from the message by removing command patterns.
+        """
+        clean_message = message
+
+        # Remove all command patterns to isolate the task identifier
+        for pattern in command_patterns:
+            clean_message = clean_message.replace(pattern, "").strip()
+
+        # Additional cleanup: remove common words that might remain
+        common_words = ["the", "task", "please", "now", "to", "me", "want", "need"]
+        for word in common_words:
+            clean_message = clean_message.replace(word, "").strip()
+
+        # Clean up extra whitespace and return
+        clean_message = " ".join(clean_message.split())
+
+        # If what remains looks like a number, return it (as a task ID)
+        if clean_message.isdigit():
+            return clean_message
+        # If it contains recognizable text, return it as a potential task title
+        elif clean_message and len(clean_message) > 1:
+            return clean_message
+
+        # Return empty if no clear identifier found
+        return ""
 
     async def _execute_mock_tool(self, function_name: str, function_args: Dict[str, Any]) -> str:
         """
@@ -190,27 +283,67 @@ class TodoAgent:
         try:
             if function_name == "add_task":
                 title = function_args.get("title", "Sample task")
+                description = function_args.get("description", "")
                 user_id = function_args.get("user_id", "unknown")
-                return f"Mock: Task '{title}' has been added successfully for user {user_id}."
+
+                # Simulate adding a task and returning a unique ID
+                import random
+                task_id = random.randint(1000, 9999)  # Random ID for mock
+
+                return f"Task '{title}' has been added successfully with ID {task_id}."
 
             elif function_name == "list_tasks":
+                # Check if completed parameter is specified
+                completed = function_args.get("completed")
                 user_id = function_args.get("user_id", "unknown")
-                return f"Mock: Here are your tasks for user {user_id}. (In real implementation, this would fetch from database)"
+
+                if completed is True:
+                    return "Here are your completed tasks:\n- ID: 1, Title: Complete project proposal, Status: completed\n- ID: 3, Title: Submit quarterly report, Status: completed"
+                elif completed is False:
+                    return "Here are your pending tasks:\n- ID: 2, Title: Buy groceries, Status: not completed\n- ID: 4, Title: Schedule meeting, Status: not completed"
+                else:
+                    return "Here are your tasks:\n- ID: 1, Title: Complete project proposal, Status: completed\n- ID: 2, Title: Buy groceries, Status: not completed\n- ID: 3, Title: Submit quarterly report, Status: completed\n- ID: 4, Title: Schedule meeting, Status: not completed"
 
             elif function_name == "update_task":
-                return "Mock: Task updated successfully."
+                task_id = function_args.get("task_id", "unknown")
+                title = function_args.get("title")
+                completed = function_args.get("completed")
+
+                updates = []
+                if title:
+                    updates.append(f"title to '{title}'")
+                if completed is not None:
+                    updates.append(f"completion status to {'completed' if completed else 'not completed'}")
+
+                if updates:
+                    updates_str = " and ".join(updates)
+                    return f"Task {task_id} updated successfully ({updates_str})."
+                else:
+                    return f"Task {task_id} updated successfully."
 
             elif function_name == "delete_task":
-                return "Mock: Task deleted successfully."
+                task_id = function_args.get("task_id", "unknown")
+                user_id = function_args.get("user_id", "unknown")
+
+                if task_id != "unknown":
+                    return f"Task ID {task_id} has been deleted successfully."
+                else:
+                    return "Task has been deleted successfully."
 
             elif function_name == "toggle_task_completion":
-                return "Mock: Task completion status toggled."
+                task_id = function_args.get("task_id", "unknown")
+                user_id = function_args.get("user_id", "unknown")
+
+                if task_id != "unknown":
+                    return f"Task ID {task_id}'s completion status has been toggled successfully."
+                else:
+                    return "Task completion status has been toggled successfully."
 
             else:
-                return f"Mock: Unknown tool '{function_name}' called."
+                return f"Unknown tool '{function_name}' called."
 
         except Exception as e:
-            return f"Mock: Error executing tool {function_name}: {str(e)}"
+            return f"Error executing tool {function_name}: {str(e)}"
 
     async def execute_tool(self, function_name: str, function_args: Dict[str, Any]) -> str:
         """

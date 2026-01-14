@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from api.todos import router as todos_router
-from api.tasks import router as tasks_router
+from app.routers.tasks import router as tasks_router
 from api.auth import router as auth_router
 from database import init_db
 
@@ -28,7 +28,7 @@ app = FastAPI(
 # Add CORS middleware to allow requests from the frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific frontend URL
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:8000", "*"],  # Allow frontend and backend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
