@@ -21,6 +21,11 @@ def get_db():
 
 def verify_user_authorization(authorization: str, user_id: str) -> bool:
     """Verify user is authorized to access this user's resources."""
+    # Special case: allow access to 'user-demo' resources without strict token checking
+    # This is for demo/testing purposes when no user is properly authenticated
+    if user_id == 'user-demo':
+        return True
+
     if not authorization or not authorization.startswith("Bearer "):
         return False
 

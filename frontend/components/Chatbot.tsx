@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, Send, X, Bot, User } from "lucide-react";
-import { tasksAPI, Task } from "@/lib/tasks-api";
 
 // Define types for chat messages
 type ChatMessage = {
