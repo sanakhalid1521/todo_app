@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Backend Server with bind mounts for development
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: todo-app-backend-dev
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:///./todo_app.db
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-your-32-character-secret-key-here}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_DAYS: 7
+      CORS_ORIGINS: http://localhost:3001
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-key-here}
+    volumes:
+      # Bind mount for live code reloading
+      - ./backend:/app/backend
+      - ./app.py:/app/app.py
+      # Volume for database persistence
+      - todo-db-data:/app/todo_app.db
+    working_dir: /app
+    command: >
+      sh -c "
+        pip install --no-cache-dir -r backend/requirements.txt &&  # Ensure dependencies are installed
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload      # Run with auto-reload
+      "
+
+  # Frontend Server with bind mounts for development
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: todo-app-frontend-dev
+    platform: linux/amd64
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      - NEXT_PUBLIC_AUTH_SECRET=${BETTER_AUTH_SECRET:-your-32-character-secret-key-here}
+    depends_on:
+      - backend
+    volumes:
+      # Bind mount for live code reloading
+      - ./frontend:/app
+      # Mount node_modules to avoid conflicts
+      - /app/node_modules
+    working_dir: /app
+
+volumes:
+  todo-db-data:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, createContext, useContext } from "react";
 import { MessageCircle, Send, X, Bot, User } from "lucide-react";
 
 // Define types for chat messages
@@ -16,6 +16,8 @@ type ChatResponse = {
   session_id: string;
   timestamp: string;
 };
+
+import { triggerTaskUpdate } from '@/hooks/useTaskUpdates';
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -77,6 +79,9 @@ export default function Chatbot() {
 
     const userMessage = inputValue.trim();
 
+    // Detect if this is a task-related operation that should trigger a refresh
+    const isTaskOperation = detectTaskOperation(userMessage);
+
     // Add user message to UI immediately
     const newUserMessage: ChatMessage = {
       id: messages.length + 1,
@@ -102,6 +107,13 @@ export default function Chatbot() {
       };
 
       setMessages(prev => [...prev, newBotMessage]);
+
+      // Trigger refresh if this was a task operation
+      if (isTaskOperation) {
+        setTimeout(() => {
+          triggerTaskUpdate();
+        }, 500); // Small delay to allow backend to process
+      }
     } catch (error) {
       console.error("Error handling message:", error);
 
@@ -117,6 +129,57 @@ export default function Chatbot() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Function to detect if the message contains a task operation
+  const detectTaskOperation = (message: string): boolean => {
+    const lowerMsg = message.toLowerCase();
+
+    // Based on agent behavior specification:
+    // Task Creation - When user mentions adding/creating/remembering something
+    const addTaskPatterns = [
+      "add ", "create ", "make ", "remember ", "bnado ", "bnao ", "task bnado",
+      "task bnao", "task add kro", "task add karo", "new ", "create a", "add a"
+    ];
+
+    // Task Listing - When user asks to see/show/list tasks
+    const listTaskPatterns = [
+      "show ", "list ", "my ", "tasks ", "dikhao ", "dekhna ", "dekho ",
+      "mere ", "mera ", "mujhe ", "list dekhni ", "show my", "show me",
+      "what", "have", "got", "todo", "pending", "all"
+    ];
+
+    // Task Completion - When user says done/complete/finished
+    const completeTaskPatterns = [
+      "done", "complete", "finished", "hogya", "ho gaya", "mark done", "mark complete",
+      "finish", "khtm", "khatam", "kr diya", "kar diya", "completed", "task complete kro",
+      "task complete karo", "task hogya", "task ho gaya", "task khtm", "task finish",
+      "complete task", "finish task", "done task"
+    ];
+
+    // Task Deletion - When user says delete/remove/cancel
+    const deleteTaskPatterns = [
+      "delete", "remove", "cancel", "delete task", "remove task", "task delete", "task remove",
+      "nikal do", "nikal d", "hatado", "hata do", "task delete kro", "task delete karo",
+      "task hatao", "task nikalo", "task hatado", "delete krna", "remove krna", "cancel task"
+    ];
+
+    // Task Update - When user says change/update/rename
+    const updateTaskPatterns = [
+      "change", "update", "modify", "rename", "edit", "change task", "update task", "modify task",
+      "rename task", "edit task", "update kro", "update karo", "badlo", "badliye", "thori"
+    ];
+
+    // Combine all patterns
+    const allTaskOperationPatterns = [
+      ...addTaskPatterns,
+      ...listTaskPatterns,
+      ...completeTaskPatterns,
+      ...deleteTaskPatterns,
+      ...updateTaskPatterns
+    ];
+
+    return allTaskOperationPatterns.some(pattern => lowerMsg.includes(pattern));
   };
 
   // Scroll to bottom of messages when new messages are added

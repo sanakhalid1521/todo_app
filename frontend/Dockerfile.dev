@@ -1,0 +1,29 @@
+# Development Dockerfile with Bind Mounts for Todo App Frontend
+# This version supports live reloading during development
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Create a non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Change ownership of the app directory
+RUN chown -R nextjs:nodejs /app
+
+# Switch to the non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# The application code will be mounted from the host system
+# Run the application in development mode
+CMD ["npm", "run", "dev"]

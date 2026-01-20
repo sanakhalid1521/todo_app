@@ -1,0 +1,60 @@
+# Vercel-optimized Dockerfile for Todo App Frontend
+# This version is specifically configured for Vercel deployment
+
+# Stage 1: Install frontend dependencies
+FROM node:20-alpine AS deps
+ARG NODE_ENV=production
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Stage 2: Build the Next.js application
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependencies from stage 1
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy frontend source code
+COPY . .
+
+# Set environment for build
+ENV NODE_ENV=production
+
+# Build the application with standalone output
+RUN npm run build
+
+# Stage 3: Production stage for Vercel
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy only necessary files for production
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy built application from builder stage
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Expose port (Vercel uses dynamic ports, but we'll specify for compatibility)
+EXPOSE 3000
+
+# Health check for Vercel
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD node healthcheck.js || exit 1
+
+# Create a simple health check file
+RUN echo 'const http = require("http"); const server = http.createServer((req, res) => { res.writeHead(200); res.end("OK"); }); server.listen(3000);' > healthcheck.js
+
+# Run the application
+CMD ["node", "server.js"]

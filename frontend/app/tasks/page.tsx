@@ -8,6 +8,7 @@ import {
   Plus, Check, Trash2, CheckCircle2, X, Calendar, AlignLeft,
   Filter, CheckSquare, Clock, ListTodo, Eye, TrendingUp, Target, Edit3, Flag, Tag, Search as SearchIcon
 } from "lucide-react";
+import { useTaskUpdates } from '@/hooks/useTaskUpdates';
 
 interface Task {
   id: number;
@@ -30,9 +31,17 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Listen for task updates from the chatbot
+  const updateTrigger = useTaskUpdates();
+
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, []); // Initial load only
+
+  useEffect(() => {
+    // Reload tasks when updateTrigger changes (when chatbot makes changes)
+    loadTasks();
+  }, [updateTrigger]);
 
   const loadTasks = async () => {
     try {

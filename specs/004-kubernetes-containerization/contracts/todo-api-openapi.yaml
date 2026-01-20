@@ -1,0 +1,600 @@
+openapi: 3.0.3
+info:
+  title: Todo AI Chatbot API
+  description: AI-powered Todo Application with Chat Interface deployed on Kubernetes
+  version: 1.0.0
+servers:
+  - url: http://todo-app-frontend.{namespace}.svc.cluster.local
+    description: Internal Kubernetes service URL for frontend
+    variables:
+      namespace:
+        default: default
+        description: Kubernetes namespace where the application is deployed
+  - url: https://{cluster-host}/api
+    description: External API endpoint when accessed via ingress
+    variables:
+      cluster-host:
+        default: todo-app.example.com
+        description: Hostname of the Kubernetes cluster ingress
+
+paths:
+  /:
+    get:
+      summary: Root endpoint
+      description: Returns welcome message and API documentation link
+      responses:
+        '200':
+          description: Welcome message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Welcome to Todo API"
+                  docs:
+                    type: string
+                    example: "/docs"
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the application
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+
+  /api/todos:
+    get:
+      summary: Get all todos
+      description: Retrieve all todo items with optional filtering
+      parameters:
+        - name: completed
+          in: query
+          description: Filter todos by completion status
+          required: false
+          schema:
+            type: boolean
+        - name: priority
+          in: query
+          description: Filter todos by priority level
+          required: false
+          schema:
+            type: string
+            enum: [low, medium, high]
+        - name: tag
+          in: query
+          description: Filter todos by tag
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create a new todo
+      description: Add a new todo item to the list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTodoRequest'
+      responses:
+        '201':
+          description: Todo created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/todos/{id}:
+    get:
+      summary: Get a specific todo
+      description: Retrieve a specific todo item by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the todo to retrieve
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Todo item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      summary: Update a todo
+      description: Modify an existing todo item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the todo to update
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTodoRequest'
+      responses:
+        '200':
+          description: Todo updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      summary: Delete a todo
+      description: Remove a specific todo item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the todo to delete
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Todo deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/tasks:
+    get:
+      summary: Get all tasks
+      description: Retrieve all tasks with optional filtering
+      parameters:
+        - name: status
+          in: query
+          description: Filter tasks by status
+          required: false
+          schema:
+            type: string
+            enum: [pending, in-progress, completed]
+        - name: priority
+          in: query
+          description: Filter tasks by priority
+          required: false
+          schema:
+            type: string
+            enum: [low, medium, high]
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create a new task
+      description: Add a new task to the list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/chat/completions:
+    post:
+      summary: Chat completions endpoint
+      description: Send a message to the AI chatbot and receive a response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messages
+              properties:
+                messages:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ChatMessage'
+                model:
+                  type: string
+                  default: "gpt-3.5-turbo"
+                temperature:
+                  type: number
+                  default: 0.7
+      responses:
+        '200':
+          description: Chat response from the AI
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/auth/login:
+    post:
+      summary: User login
+      description: Authenticate user and return token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: "user@example.com"
+                password:
+                  type: string
+                  example: "password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  token_type:
+                    type: string
+                    example: "bearer"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    Todo:
+      type: object
+      required:
+        - id
+        - title
+        - completed
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the todo
+          example: 1
+        title:
+          type: string
+          description: Title of the todo
+          example: "Complete project documentation"
+        description:
+          type: string
+          description: Optional description of the todo
+          example: "Write comprehensive documentation for the project"
+        completed:
+          type: boolean
+          description: Whether the todo is completed
+          example: false
+        priority:
+          type: string
+          description: Priority level of the todo
+          enum: [low, medium, high]
+          example: "high"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the todo
+          example: ["work", "urgent"]
+        due_date:
+          type: string
+          format: date-time
+          description: Due date for the todo
+          example: "2023-12-31T23:59:59Z"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2023-12-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2023-12-01T10:00:00Z"
+
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - status
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the task
+          example: 1
+        title:
+          type: string
+          description: Title of the task
+          example: "Implement authentication"
+        description:
+          type: string
+          description: Detailed description of the task
+          example: "Implement user authentication system"
+        status:
+          type: string
+          description: Current status of the task
+          enum: [pending, in-progress, completed]
+          example: "in-progress"
+        priority:
+          type: string
+          description: Priority level of the task
+          enum: [low, medium, high]
+          example: "high"
+        assignee:
+          type: string
+          description: User assigned to the task
+          example: "john.doe@example.com"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2023-12-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2023-12-01T10:00:00Z"
+
+    CreateTodoRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: Title of the new todo
+          example: "New todo item"
+        description:
+          type: string
+          description: Optional description of the todo
+          example: "Description of the new todo item"
+        priority:
+          type: string
+          description: Priority level of the todo
+          enum: [low, medium, high]
+          example: "medium"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags associated with the todo
+          example: ["personal", "important"]
+        due_date:
+          type: string
+          format: date-time
+          description: Due date for the todo
+          example: "2023-12-31T23:59:59Z"
+
+    UpdateTodoRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: New title for the todo
+          example: "Updated todo title"
+        description:
+          type: string
+          description: New description for the todo
+          example: "Updated description"
+        completed:
+          type: boolean
+          description: New completion status
+          example: true
+        priority:
+          type: string
+          description: New priority level
+          enum: [low, medium, high]
+          example: "high"
+        tags:
+          type: array
+          items:
+            type: string
+          description: New tags for the todo
+          example: ["updated", "important"]
+        due_date:
+          type: string
+          format: date-time
+          description: New due date for the todo
+          example: "2023-12-31T23:59:59Z"
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: Title of the new task
+          example: "New task"
+        description:
+          type: string
+          description: Detailed description of the task
+          example: "Detailed description of the new task"
+        priority:
+          type: string
+          description: Priority level of the task
+          enum: [low, medium, high]
+          example: "medium"
+        assignee:
+          type: string
+          description: User assigned to the task
+          example: "jane.doe@example.com"
+
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant]
+          description: Role of the message sender
+          example: "user"
+        content:
+          type: string
+          description: Content of the message
+          example: "What can you help me with?"
+
+    ChatResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "chatcmpl-1234567890abcdef"
+        object:
+          type: string
+          example: "chat.completion"
+        created:
+          type: integer
+          example: 1677610602
+        model:
+          type: string
+          example: "gpt-3.5-turbo-0613"
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+                example: 0
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+                example: "stop"
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+              example: 13
+            completion_tokens:
+              type: integer
+              example: 10
+            total_tokens:
+              type: integer
+              example: 23
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+                example: "Not authenticated"
+    BadRequest:
+      description: Bad Request - Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+                example: "Invalid input data"
+    NotFound:
+      description: Not Found - Requested resource does not exist
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+                example: "Item not found"
+    InternalServerError:
+      description: Internal Server Error - Something went wrong on the server
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+                example: "Internal server error"
+
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+securityDefinitions:
+  bearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+  apiKey:
+    type: apiKey
+    in: header
+    name: X-API-Key

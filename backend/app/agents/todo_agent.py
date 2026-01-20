@@ -129,51 +129,43 @@ class TodoAgent:
         """
         Mock implementation for processing messages when OpenAI API key is not available.
         Supports both English and Roman Urdu commands.
+        This version connects to the database for actual operations.
         """
         message_lower = message.lower()
 
-        # English and Roman Urdu pattern matching for commands
-        # Add task patterns
+        # English and Roman Urdu pattern matching for commands based on agent behavior specification
+        # Task Creation - When user mentions adding/creating/remembering something
         add_task_patterns = [
-            "add task", "add a task", "create task", "bnado task", "bnao task", "task bnado",
-            "task bnao", "task add kro", "task add karo", "new task", "task create"
+            "add ", "create ", "make ", "remember ", "bnado ", "bnao ", "task bnado",
+            "task bnao", "task add kro", "task add karo", "new ", "create a", "add a"
         ]
 
-        # List/Show tasks patterns
+        # Task Listing - When user asks to see/show/list tasks
         list_task_patterns = [
-            "show tasks", "list tasks", "my tasks", "tasks dikhao", "task dikhao",
-            "dekhna hai", "dikhao mujhe", "mera tasks", "task list", "list dekhni hai",
-            "mjhe task ki list dikhao", "meri task list", "tasks show kro", "tasks show karo",
-            "show my task", "show me tasks", "show task", "list dekhni", "task list dekhni",
-            "mujhe task", "task dekhni", "dekhna chahti hun", "kya hai meri list"
+            "show ", "list ", "my ", "tasks ", "dikhao ", "dekhna ", "dekho ",
+            "mere ", "mera ", "mujhe ", "list dekhni ", "show my", "show me",
+            "what", "have", "got", "todo", "pending", "all"
         ]
 
-        # Pending/Incomplete tasks patterns
-        pending_task_patterns = [
-            "pending task", "pending tasks", "incomplete tasks", "todo tasks", "kam pending hai",
-            "kya pending hai", "pending dekhao", "pending dikhao", "task pending", "pending list",
-            "incomplete", "todo", "krna hai", "abhi baki hai", "baki task", "remaining task"
-        ]
-
-        # Completed tasks patterns
-        completed_task_patterns = [
-            "completed task", "completed tasks", "done tasks", "finished tasks", "hogye task",
-            "ho gaye task", "completed dekhao", "done dekhao", "khtm tasks", "finish dekhna",
-            "kya kiya hai", "completed list", "done list", "finished list"
-        ]
-
-        # Complete/Done patterns
-        complete_patterns = [
-            "complete", "done", "hogya", "ho gaya", "mark complete", "task complete",
+        # Task Completion - When user says done/complete/finished
+        complete_task_patterns = [
+            "done", "complete", "finished", "hogya", "ho gaya", "mark done", "mark complete",
             "finish", "khtm", "khatam", "kr diya", "kar diya", "completed", "task complete kro",
-            "task complete karo", "task hogya", "task ho gaya", "task khtm", "task finish"
+            "task complete karo", "task hogya", "task ho gaya", "task khtm", "task finish",
+            "complete task", "finish task", "done task"
         ]
 
-        # Delete/Remove patterns
-        delete_patterns = [
-            "delete", "remove", "delete task", "remove task", "task delete", "task remove",
+        # Task Deletion - When user says delete/remove/cancel
+        delete_task_patterns = [
+            "delete", "remove", "cancel", "delete task", "remove task", "task delete", "task remove",
             "nikal do", "nikal d", "hatado", "hata do", "task delete kro", "task delete karo",
-            "task hatao", "task nikalo", "task hatado", "delete krna", "remove krna"
+            "task hatao", "task nikalo", "task hatado", "delete krna", "remove krna", "cancel task"
+        ]
+
+        # Task Update - When user says change/update/rename
+        update_task_patterns = [
+            "change", "update", "modify", "rename", "edit", "change task", "update task", "modify task",
+            "rename task", "edit task", "update kro", "update karo", "badlo", "badliye", "thori"
         ]
 
         # Check for add task patterns
@@ -187,66 +179,90 @@ class TodoAgent:
                 if not task_text:
                     task_text = "Sample task"
 
-                # Execute mock add task
-                result = await self._execute_mock_tool("add_task", {"user_id": user_id, "title": task_text.strip()})
+                # Extract description if present (look for "and" or "description is")
+                description = ""
+                if " and description is " in message_lower:
+                    desc_part = message_lower.split(" and description is ")[1]
+                    description = desc_part.strip()
+
+                # Execute actual database add task (not mock)
+                function_args = {
+                    "user_id": user_id,
+                    "title": task_text.strip(),
+                    "description": description
+                }
+                result = await self._execute_direct_db_operation("add_task", function_args)
                 return result
 
-        # Check for list tasks patterns
-        for pattern in list_task_patterns:
+        # Check for update task patterns
+        for pattern in update_task_patterns:
             if pattern in message_lower:
-                result = await self._execute_mock_tool("list_tasks", {"user_id": user_id})
-                return result
+                # Extract task ID or title if mentioned in message
+                task_identifier = self._extract_task_identifier(message_lower, update_task_patterns)
 
-        # Check for pending tasks patterns
-        for pattern in pending_task_patterns:
-            if pattern in message_lower:
-                result = await self._execute_mock_tool("list_tasks", {"user_id": user_id, "completed": False})
-                return result
+                # Extract new title if available
+                new_title = self._extract_new_title_from_message(message_lower, update_task_patterns)
 
-        # Check for completed tasks patterns
-        for pattern in completed_task_patterns:
-            if pattern in message_lower:
-                result = await self._execute_mock_tool("list_tasks", {"user_id": user_id, "completed": True})
+                if task_identifier and task_identifier.isdigit():
+                    function_args = {
+                        "user_id": user_id,
+                        "task_id": int(task_identifier),
+                        "title": new_title or "Updated task"
+                    }
+                    result = await self._execute_direct_db_operation("update_task", function_args)
+                else:
+                    # For default update, we need a valid task ID - let's list tasks first to show available ones
+                    result = "Please specify which task ID to update. Available tasks: " + await self._execute_direct_db_operation("list_tasks", {"user_id": user_id, "status": "all"})
                 return result
 
         # Check for complete task patterns
-        for pattern in complete_patterns:
+        for pattern in complete_task_patterns:
             if pattern in message_lower:
                 # Extract task ID or title if mentioned in message
-                task_identifier = self._extract_task_identifier(message_lower, complete_patterns)
+                task_identifier = self._extract_task_identifier(message_lower, complete_task_patterns)
 
-                if task_identifier:
-                    # If it's numeric, treat as ID; otherwise, find task by title
-                    if task_identifier.isdigit():
-                        result = await self._execute_mock_tool("toggle_task_completion", {"user_id": user_id, "task_id": int(task_identifier)})
-                    else:
-                        # For mock purposes, we'll just confirm the action
-                        result = await self._execute_mock_tool("toggle_task_completion", {"user_id": user_id})
+                if task_identifier and task_identifier.isdigit():
+                    function_args = {
+                        "user_id": user_id,
+                        "task_id": int(task_identifier)
+                    }
+                    result = await self._execute_direct_db_operation("complete_task", function_args)
                 else:
-                    # Default to toggle (would need to show user tasks to pick which one to complete)
-                    result = await self._execute_mock_tool("toggle_task_completion", {"user_id": user_id})
+                    # For default completion, we need a valid task ID - list tasks first
+                    result = "Please specify which task ID to complete. Available tasks: " + await self._execute_direct_db_operation("list_tasks", {"user_id": user_id, "status": "all"})
                 return result
 
         # Check for delete task patterns
-        for pattern in delete_patterns:
+        for pattern in delete_task_patterns:
             if pattern in message_lower:
                 # Extract task ID or title if mentioned in message
-                task_identifier = self._extract_task_identifier(message_lower, delete_patterns)
+                task_identifier = self._extract_task_identifier(message_lower, delete_task_patterns)
 
-                if task_identifier:
-                    # If it's numeric, treat as ID; otherwise, find task by title
-                    if task_identifier.isdigit():
-                        result = await self._execute_mock_tool("delete_task", {"user_id": user_id, "task_id": int(task_identifier)})
-                    else:
-                        # For mock purposes, we'll just confirm the action
-                        result = await self._execute_mock_tool("delete_task", {"user_id": user_id})
+                if task_identifier and task_identifier.isdigit():
+                    function_args = {
+                        "user_id": user_id,
+                        "task_id": int(task_identifier)
+                    }
+                    result = await self._execute_direct_db_operation("delete_task", function_args)
                 else:
-                    # Default delete message
-                    result = await self._execute_mock_tool("delete_task", {"user_id": user_id})
+                    # For default deletion, we need a valid task ID - list tasks first
+                    result = "Please specify which task ID to delete. Available tasks: " + await self._execute_direct_db_operation("list_tasks", {"user_id": user_id, "status": "all"})
+                return result
+
+        # Check for list tasks patterns - check this last as it's more general
+        for pattern in list_task_patterns:
+            if pattern in message_lower:
+                # Check for specific filters in the message
+                if any(word in message_lower for word in ["pending", "incomplete", "todo", "krna hai", "baki"]):
+                    result = await self._execute_direct_db_operation("list_tasks", {"user_id": user_id, "status": "pending"})
+                elif any(word in message_lower for word in ["completed", "done", "finished", "hogye", "ho gaye"]):
+                    result = await self._execute_direct_db_operation("list_tasks", {"user_id": user_id, "status": "completed"})
+                else:
+                    result = await self._execute_direct_db_operation("list_tasks", {"user_id": user_id, "status": "all"})
                 return result
 
         # Default response
-        return f"I've received your message: '{message}'. I can help you manage tasks like adding, listing, or completing tasks when the AI service is available."
+        return f"I've received your message: '{message}'. I can help you manage tasks like adding, listing, or completing tasks."
 
     def _extract_task_identifier(self, message: str, command_patterns: List[str]) -> str:
         """
@@ -276,74 +292,48 @@ class TodoAgent:
         # Return empty if no clear identifier found
         return ""
 
+    def _extract_new_title_from_message(self, message: str, command_patterns: List[str]) -> str:
+        """
+        Extract new title from update commands in the message.
+        """
+        clean_message = message
+
+        # Remove command patterns
+        for pattern in command_patterns:
+            clean_message = clean_message.replace(pattern, "").strip()
+
+        # Look for keywords indicating a new title (like "to", "as", etc.)
+        separators = [" to ", " as ", " with ", " - ", ": "]
+        for sep in separators:
+            parts = clean_message.split(sep)
+            if len(parts) > 1:
+                # Return the part after the separator (the new title)
+                new_title = parts[1].strip()
+                # Clean up any remaining common words
+                common_words = ["the", "task", "please", "now", "to", "me", "want", "need"]
+                for word in common_words:
+                    new_title = new_title.replace(word, "").strip()
+                new_title = " ".join(new_title.split())  # Clean up extra spaces
+                if len(new_title) > 1:
+                    return new_title
+
+        # If no separator found, return what's left as potential new title
+        for word in ["the", "task", "please", "now", "to", "me", "want", "need"]:
+            clean_message = clean_message.replace(word, "").strip()
+        clean_message = " ".join(clean_message.split())
+
+        if len(clean_message) > 1:
+            return clean_message
+
+        return ""
+
     async def _execute_mock_tool(self, function_name: str, function_args: Dict[str, Any]) -> str:
         """
-        Mock implementation of tool execution for testing purposes.
+        Legacy mock implementation - this is no longer used since we now call actual database operations.
+        Kept for compatibility but shouldn't be called in the updated flow.
         """
-        try:
-            if function_name == "add_task":
-                title = function_args.get("title", "Sample task")
-                description = function_args.get("description", "")
-                user_id = function_args.get("user_id", "unknown")
-
-                # Simulate adding a task and returning a unique ID
-                import random
-                task_id = random.randint(1000, 9999)  # Random ID for mock
-
-                return f"Task '{title}' has been added successfully with ID {task_id}."
-
-            elif function_name == "list_tasks":
-                # Check if completed parameter is specified
-                completed = function_args.get("completed")
-                user_id = function_args.get("user_id", "unknown")
-
-                if completed is True:
-                    return "Here are your completed tasks:\n- ID: 1, Title: Complete project proposal, Status: completed\n- ID: 3, Title: Submit quarterly report, Status: completed"
-                elif completed is False:
-                    return "Here are your pending tasks:\n- ID: 2, Title: Buy groceries, Status: not completed\n- ID: 4, Title: Schedule meeting, Status: not completed"
-                else:
-                    return "Here are your tasks:\n- ID: 1, Title: Complete project proposal, Status: completed\n- ID: 2, Title: Buy groceries, Status: not completed\n- ID: 3, Title: Submit quarterly report, Status: completed\n- ID: 4, Title: Schedule meeting, Status: not completed"
-
-            elif function_name == "update_task":
-                task_id = function_args.get("task_id", "unknown")
-                title = function_args.get("title")
-                completed = function_args.get("completed")
-
-                updates = []
-                if title:
-                    updates.append(f"title to '{title}'")
-                if completed is not None:
-                    updates.append(f"completion status to {'completed' if completed else 'not completed'}")
-
-                if updates:
-                    updates_str = " and ".join(updates)
-                    return f"Task {task_id} updated successfully ({updates_str})."
-                else:
-                    return f"Task {task_id} updated successfully."
-
-            elif function_name == "delete_task":
-                task_id = function_args.get("task_id", "unknown")
-                user_id = function_args.get("user_id", "unknown")
-
-                if task_id != "unknown":
-                    return f"Task ID {task_id} has been deleted successfully."
-                else:
-                    return "Task has been deleted successfully."
-
-            elif function_name == "toggle_task_completion":
-                task_id = function_args.get("task_id", "unknown")
-                user_id = function_args.get("user_id", "unknown")
-
-                if task_id != "unknown":
-                    return f"Task ID {task_id}'s completion status has been toggled successfully."
-                else:
-                    return "Task completion status has been toggled successfully."
-
-            else:
-                return f"Unknown tool '{function_name}' called."
-
-        except Exception as e:
-            return f"Error executing tool {function_name}: {str(e)}"
+        print(f"WARNING: _execute_mock_tool called with {function_name}, this shouldn't happen in the new implementation!")
+        return f"Mock operation for {function_name} - this function should not be called anymore."
 
     async def execute_tool(self, function_name: str, function_args: Dict[str, Any]) -> str:
         """
@@ -381,10 +371,17 @@ class TodoAgent:
         try:
             if function_name == "add_task":
                 with Session(engine) as session:
+                    user_id = function_args.get("user_id")
+                    title = function_args.get("title", "")
+                    description = function_args.get("description", "")
+
+                    # Debug: Print the values being used
+                    print(f"DEBUG: Adding task for user_id: {user_id}, title: {title}")
+
                     new_task = Task(
-                        user_id=function_args.get("user_id"),
-                        title=function_args.get("title", ""),
-                        description=function_args.get("description", ""),
+                        user_id=user_id,
+                        title=title,
+                        description=description,
                         completed=False
                     )
 
@@ -392,32 +389,52 @@ class TodoAgent:
                     session.commit()
                     session.refresh(new_task)
 
-                    return f"Task '{new_task.title}' has been added successfully with ID {new_task.id}"
+                    # Debug: Confirm the task was created
+                    print(f"DEBUG: Created task with ID {new_task.id} for user {new_task.user_id}")
+
+                    return f'{{"task_id": {new_task.id}, "status": "created", "title": "{new_task.title}"}}'
 
             elif function_name == "list_tasks":
                 with Session(engine) as session:
-                    query = select(Task).where(Task.user_id == function_args.get("user_id"))
+                    # Get user_id from function_args
+                    user_id = function_args.get("user_id")
 
-                    completed = function_args.get("completed")
-                    if completed is not None:
-                        query = query.where(Task.completed == completed)
+                    # Debug: Print the user_id being used for the query
+                    print(f"DEBUG: Querying tasks for user_id: {user_id}")
+
+                    query = select(Task).where(Task.user_id == user_id)
+
+                    # Handle status filtering according to spec
+                    status_filter = function_args.get("status", "all")
+                    if status_filter == "completed":
+                        query = query.where(Task.completed == True)
+                    elif status_filter == "pending":
+                        query = query.where(Task.completed == False)
 
                     tasks = session.exec(query).all()
 
-                    if not tasks:
-                        return "You have no tasks."
+                    # Debug: Print number of tasks found
+                    print(f"DEBUG: Found {len(tasks)} tasks for user {user_id}")
 
+                    # Format response according to specification
                     task_list = []
                     for task in tasks:
-                        status = "completed" if task.completed else "not completed"
-                        task_list.append(f"- ID: {task.id}, Title: {task.title}, Status: {status}")
+                        task_dict = {
+                            "id": task.id,
+                            "title": task.title,
+                            "completed": task.completed
+                        }
+                        task_list.append(task_dict)
 
-                    return f"You have {len(tasks)} tasks:\n" + "\n".join(task_list)
+                    import json
+                    return json.dumps(task_list)
 
             elif function_name == "update_task":
                 with Session(engine) as session:
                     task_id = function_args.get("task_id", 0)
                     user_id = function_args.get("user_id")
+
+                    print(f"DEBUG: Attempting to update task_id {task_id} for user {user_id}")
 
                     # Get the task by ID and user_id to ensure ownership
                     query = select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
@@ -426,13 +443,15 @@ class TodoAgent:
                     if not target_task:
                         return f"Task with ID {task_id} not found or you don't have permission to modify it"
 
+                    print(f"DEBUG: Found task {target_task.id} titled '{target_task.title}' to update")
+
                     # Update the task fields if provided
                     if "title" in function_args and function_args["title"] is not None:
                         target_task.title = function_args["title"]
+                        print(f"DEBUG: Updated title to '{target_task.title}'")
                     if "description" in function_args and function_args["description"] is not None:
                         target_task.description = function_args["description"]
-                    if "completed" in function_args and function_args["completed"] is not None:
-                        target_task.completed = function_args["completed"]
+                        print(f"DEBUG: Updated description to '{target_task.description}'")
 
                     target_task.updated_at = datetime.now()
 
@@ -440,13 +459,15 @@ class TodoAgent:
                     session.commit()
                     session.refresh(target_task)
 
-                    status = "completed" if target_task.completed else "not completed"
-                    return f"Task {target_task.id} updated successfully. Title: {target_task.title}, Status: {status}"
+                    import json
+                    return json.dumps({"task_id": target_task.id, "status": "updated", "title": target_task.title})
 
             elif function_name == "delete_task":
                 with Session(engine) as session:
                     task_id = function_args.get("task_id", 0)
                     user_id = function_args.get("user_id")
+
+                    print(f"DEBUG: Attempting to delete task_id {task_id} for user {user_id}")
 
                     # Get the task by ID and user_id to ensure ownership
                     query = select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
@@ -455,15 +476,23 @@ class TodoAgent:
                     if not target_task:
                         return f"Task with ID {task_id} not found or you don't have permission to delete it"
 
+                    print(f"DEBUG: Found task {target_task.id} titled '{target_task.title}' to delete")
+
+                    # Store the title before deletion to include in the response
+                    title_before_deletion = target_task.title
+
                     session.delete(target_task)
                     session.commit()
 
-                    return f"Task '{target_task.title}' has been deleted successfully"
+                    import json
+                    return json.dumps({"task_id": target_task.id, "status": "deleted", "title": title_before_deletion})
 
-            elif function_name == "toggle_task_completion":
+            elif function_name == "complete_task":
                 with Session(engine) as session:
                     task_id = function_args.get("task_id", 0)
                     user_id = function_args.get("user_id")
+
+                    print(f"DEBUG: Attempting to complete task_id {task_id} for user {user_id}")
 
                     # Get the task by ID and user_id to ensure ownership
                     query = select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
@@ -472,16 +501,18 @@ class TodoAgent:
                     if not target_task:
                         return f"Task with ID {task_id} not found or you don't have permission to modify it"
 
-                    # Toggle completion status
-                    target_task.completed = not target_task.completed
+                    print(f"DEBUG: Found task {target_task.id} titled '{target_task.title}' to complete")
+
+                    # Mark as completed
+                    target_task.completed = True
                     target_task.updated_at = datetime.now()
 
                     session.add(target_task)
                     session.commit()
                     session.refresh(target_task)
 
-                    status = "completed" if target_task.completed else "not completed"
-                    return f"Task '{target_task.title}' completion status toggled to {status}"
+                    import json
+                    return json.dumps({"task_id": target_task.id, "status": "completed", "title": target_task.title})
 
             else:
                 return f"Unknown tool: {function_name}"

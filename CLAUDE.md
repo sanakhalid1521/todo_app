@@ -1,4 +1,4 @@
-# Claude Code Rules for Todo App Project
+﻿# Claude Code Rules for Todo App Project
 
 This file is generated during init for the selected agent.
 

@@ -1,0 +1,37 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+{{- if .Values.frontend.ingress.enabled }}
+APPLICATION ACCESS:
+------------------
+You can access your application at:
+{{- range $host := .Values.frontend.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.frontend.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else }}
+APPLICATION ACCESS:
+------------------
+Get the application URL by running these commands:
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "todo-app.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+CONFIGURATION:
+--------------
+To configure your application, you will need to provide the following secrets:
+- DATABASE_URL: Your database connection string
+- OPENAI_API_KEY: Your OpenAI API key
+- BETTER_AUTH_SECRET: Your authentication secret
+
+You can update these values by running:
+  $ helm upgrade {{ .Release.Name }} --set secrets.databaseUrl="YOUR_ENCODED_DB_URL" --set secrets.openaiApiKey="YOUR_ENCODED_OPENAI_KEY" --set secrets.authSecret="YOUR_ENCODED_AUTH_SECRET"

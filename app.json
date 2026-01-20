@@ -1,0 +1,22 @@
+{
+  "runtime": "docker",
+  "secrets": [
+    {
+      "id": "OPENAI_API_KEY",
+      "description": "OpenAI API key for AI chatbot functionality",
+      "required": true
+    },
+    {
+      "id": "NEON_DB_URL",
+      "description": "Neon Database URL for persistent storage",
+      "required": false
+    }
+  ],
+  "env": [
+    {
+      "name": "NEXT_PUBLIC_API_URL",
+      "value": "http://localhost:8000",
+      "description": "Backend API URL"
+    }
+  ]
+}
