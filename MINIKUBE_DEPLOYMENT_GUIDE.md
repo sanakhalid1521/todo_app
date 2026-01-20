@@ -87,15 +87,23 @@ docker ai "What can you do?"
 # Navigate to project root
 cd E:\quarter-4\Hackathon-II\phase-1 todo
 
-# Build backend image using Docker AI
-docker build -t todo-backend:latest ./backend
+# Build production-ready backend image using Docker AI
+docker build -f backend/Dockerfile.prod -t todo-backend:latest ./backend
 
-# Build frontend image using Docker AI
-docker build -t todo-frontend:latest ./frontend
+# Build production-ready frontend image using Docker AI
+docker build -f frontend/Dockerfile.prod -t todo-frontend:latest ./frontend
 
 # Verify images were built
 docker images | grep todo-
 ```
+
+## Understanding Docker Compose Files
+
+Different docker-compose files are provided for different environments:
+
+- `docker-compose.yml` - Development environment with Dockerfile.dev (contains bind mounts for live development)
+- `docker-compose.prod.yml` - Production-like environment with Dockerfile.prod (no bind mounts, optimized for production)
+- `docker-compose.dev.yml` - Alternative development setup with live reload capabilities
 
 ## Step 4: Deploy Using kubectl-ai and Kagent
 

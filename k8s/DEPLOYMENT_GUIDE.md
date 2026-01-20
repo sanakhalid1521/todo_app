@@ -31,6 +31,15 @@ kubectl create namespace todo-app
 helm install todo-app ./k8s/helm --namespace todo-app --set secrets.databaseUrl="<BASE64_ENCODED_DB_URL>" --set secrets.openaiApiKey="<BASE64_ENCODED_OPENAI_KEY>" --set secrets.authSecret="<BASE64_ENCODED_AUTH_SECRET>"
 ```
 
+## Development vs Production Considerations
+
+### Bind Mounts and Local Development
+- **Development**: Docker Compose files use bind mounts for live reloading during development
+- **Production/Kubernetes**: No bind mounts are used as they are not suitable for containerized environments
+- **Dockerfiles**: Different Dockerfiles are provided for different environments:
+  - `Dockerfile.dev`: For development with live reload capabilities
+  - `Dockerfile.prod`: For production with optimized builds and no bind mounts
+
 ### 2. Verify the installation
 
 ```bash

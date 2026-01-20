@@ -5,7 +5,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: todo-app-backend
     platform: linux/amd64
     ports:
@@ -21,7 +21,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/.venv
-      - todo_db_volume:/app/src
     networks:
       - todo-network
     healthcheck:
@@ -35,7 +34,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: todo-app-frontend
     platform: linux/amd64
     ports:
