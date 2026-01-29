@@ -168,6 +168,15 @@ The application includes an AI-powered chatbot that understands natural language
 If you encounter issues:
 
 1. **Chatbot errors**: Check the [Chatbot Troubleshooting Guide](CHATBOT_TROUBLESHOOTING.md)
+2. **Frontend container not running in K8s**: Check the [Frontend Container Troubleshooting Guide](FRONTEND_CONTAINER_TROUBLESHOOTING.md)
+3. **Database connection**: Verify your Neon database URL in `.env`
+4. **Kubernetes**: Use `kubectl logs -f deployment/backend-deployment -n todo-app` to check logs
+
+## 🐛 Troubleshooting
+
+If you encounter issues:
+
+1. **Chatbot errors**: Check the [Chatbot Troubleshooting Guide](CHATBOT_TROUBLESHOOTING.md)
 2. **Database connection**: Verify your Neon database URL in `.env`
 3. **Kubernetes**: Use `kubectl logs -f deployment/backend-deployment -n todo-app` to check logs
 
