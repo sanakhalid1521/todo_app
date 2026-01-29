@@ -9,9 +9,10 @@ from openai import OpenAI
 from app.mcp.tools import MCP_TOOLS
 import httpx
 import asyncio
-from app.database import get_engine
+from database import get_async_session
 from app.models.task import Task
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 
@@ -366,11 +367,10 @@ class TodoAgent:
         Execute task operations using direct database operations.
         This serves as both the primary implementation and fallback.
         """
-        engine = get_engine()
-
-        try:
-            if function_name == "add_task":
-                with Session(engine) as session:
+        # Get async session
+        async for session in get_async_session():
+            try:
+                if function_name == "add_task":
                     user_id = function_args.get("user_id")
                     title = function_args.get("title", "")
                     description = function_args.get("description", "")
@@ -386,16 +386,15 @@ class TodoAgent:
                     )
 
                     session.add(new_task)
-                    session.commit()
-                    session.refresh(new_task)
+                    await session.commit()
+                    await session.refresh(new_task)
 
                     # Debug: Confirm the task was created
                     print(f"DEBUG: Created task with ID {new_task.id} for user {new_task.user_id}")
 
                     return f'{{"task_id": {new_task.id}, "status": "created", "title": "{new_task.title}"}}'
 
-            elif function_name == "list_tasks":
-                with Session(engine) as session:
+                elif function_name == "list_tasks":
                     # Get user_id from function_args
                     user_id = function_args.get("user_id")
 
@@ -411,7 +410,8 @@ class TodoAgent:
                     elif status_filter == "pending":
                         query = query.where(Task.completed == False)
 
-                    tasks = session.exec(query).all()
+                    result = await session.execute(query)
+                    tasks = result.scalars().all()
 
                     # Debug: Print number of tasks found
                     print(f"DEBUG: Found {len(tasks)} tasks for user {user_id}")
@@ -429,8 +429,7 @@ class TodoAgent:
                     import json
                     return json.dumps(task_list)
 
-            elif function_name == "update_task":
-                with Session(engine) as session:
+                elif function_name == "update_task":
                     task_id = function_args.get("task_id", 0)
                     user_id = function_args.get("user_id")
 
@@ -438,7 +437,8 @@ class TodoAgent:
 
                     # Get the task by ID and user_id to ensure ownership
                     query = select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
-                    target_task = session.exec(query).first()
+                    result = await session.execute(query)
+                    target_task = result.scalar_one_or_none()
 
                     if not target_task:
                         return f"Task with ID {task_id} not found or you don't have permission to modify it"
@@ -456,14 +456,13 @@ class TodoAgent:
                     target_task.updated_at = datetime.now()
 
                     session.add(target_task)
-                    session.commit()
-                    session.refresh(target_task)
+                    await session.commit()
+                    await session.refresh(target_task)
 
                     import json
                     return json.dumps({"task_id": target_task.id, "status": "updated", "title": target_task.title})
 
-            elif function_name == "delete_task":
-                with Session(engine) as session:
+                elif function_name == "delete_task":
                     task_id = function_args.get("task_id", 0)
                     user_id = function_args.get("user_id")
 
@@ -471,7 +470,8 @@ class TodoAgent:
 
                     # Get the task by ID and user_id to ensure ownership
                     query = select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
-                    target_task = session.exec(query).first()
+                    result = await session.execute(query)
+                    target_task = result.scalar_one_or_none()
 
                     if not target_task:
                         return f"Task with ID {task_id} not found or you don't have permission to delete it"
@@ -481,14 +481,13 @@ class TodoAgent:
                     # Store the title before deletion to include in the response
                     title_before_deletion = target_task.title
 
-                    session.delete(target_task)
-                    session.commit()
+                    await session.delete(target_task)
+                    await session.commit()
 
                     import json
                     return json.dumps({"task_id": target_task.id, "status": "deleted", "title": title_before_deletion})
 
-            elif function_name == "complete_task":
-                with Session(engine) as session:
+                elif function_name == "complete_task":
                     task_id = function_args.get("task_id", 0)
                     user_id = function_args.get("user_id")
 
@@ -496,7 +495,8 @@ class TodoAgent:
 
                     # Get the task by ID and user_id to ensure ownership
                     query = select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
-                    target_task = session.exec(query).first()
+                    result = await session.execute(query)
+                    target_task = result.scalar_one_or_none()
 
                     if not target_task:
                         return f"Task with ID {task_id} not found or you don't have permission to modify it"
@@ -508,17 +508,17 @@ class TodoAgent:
                     target_task.updated_at = datetime.now()
 
                     session.add(target_task)
-                    session.commit()
-                    session.refresh(target_task)
+                    await session.commit()
+                    await session.refresh(target_task)
 
                     import json
                     return json.dumps({"task_id": target_task.id, "status": "completed", "title": target_task.title})
 
-            else:
-                return f"Unknown tool: {function_name}"
+                else:
+                    return f"Unknown tool: {function_name}"
 
-        except Exception as e:
-            return f"Error executing tool {function_name}: {str(e)}"
+            except Exception as e:
+                return f"Error executing tool {function_name}: {str(e)}"
 
 
 # Global instance for use in the application

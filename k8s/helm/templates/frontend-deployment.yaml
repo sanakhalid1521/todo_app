@@ -43,8 +43,12 @@ spec:
           env:
             {{- range .Values.frontend.env }}
             - name: {{ .name }}
-              value: {{ .value }}
+              value: {{ .value | quote }}
             {{- end }}
+          {{- if .Values.frontend.volumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.frontend.volumeMounts | nindent 12 }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /health
@@ -63,6 +67,10 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
+      {{- if .Values.frontend.volumes }}
+      volumes:
+        {{- toYaml .Values.frontend.volumes | nindent 8 }}
+      {{- end }}
       {{- with .Values.frontend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -21,9 +21,13 @@ RUN chown -R nextjs:nodejs /app
 # Switch to the non-root user
 USER nextjs
 
+# Copy the startup script with proper permissions
+COPY --chown=nextjs:nodejs startup.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
+
 # Expose port
 EXPOSE 3000
 
 # The application code will be mounted from the host system
-# Run the application in development mode
-CMD ["npm", "run", "dev"]
+# Run the application in development mode with fixed lockfile issue
+CMD ["/app/startup.sh"]

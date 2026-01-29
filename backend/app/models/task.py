@@ -34,10 +34,10 @@ class Task(SQLModel, table=True):
         description="Task completion status"
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         description="Task creation timestamp"
     )
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         description="Last modification timestamp"
     )

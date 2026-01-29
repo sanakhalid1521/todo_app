@@ -15,7 +15,7 @@ data:
   DATABASE_TIMEOUT: "30"
 
   # Frontend settings
-  NEXT_PUBLIC_API_BASE_URL: {{ .Values.frontend.env | first | get "value" | default "http://backend-service:8000" | quote }}
+  NEXT_PUBLIC_API_BASE_URL: {{ range .Values.frontend.env }}{{ if eq .name "NEXT_PUBLIC_API_BASE_URL" }}{{ .value }}{{ end }}{{ end }}
   NEXT_PUBLIC_APP_NAME: "Todo AI Chatbot"
 
   # CORS settings

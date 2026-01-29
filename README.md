@@ -68,6 +68,8 @@ hackathon-todo/
 - Security configurations (Network Policies, RBAC)
 - Auto-scaling with Horizontal Pod Autoscalers
 - AI-assisted deployment tools (kubectl-ai, Kagent, Docker AI Agent)
+- Complete deployment scripts for Linux/Mac/Windows
+- AI Chatbot functionality fully preserved in Kubernetes
 
 ### Phase V: Advanced Cloud Deployment
 - Production deployment on DigitalOcean Kubernetes
@@ -117,11 +119,67 @@ hackathon-todo/
 
 ## Getting Started
 
-1. Clone the repository
-2. Navigate to the frontend directory and install dependencies: `npm install`
-3. Navigate to the backend directory and install dependencies: `pip install -r requirements.txt`
-4. Start the development servers for both frontend and backend
+### Prerequisites
+
+- Docker Desktop with Kubernetes enabled
+- Helm 3.x
+- kubectl
+- Node.js 18+ (for frontend development)
+- Python 3.11+ (for backend development)
+- Neon database account (free tier available)
+
+### Quick Start with Docker Compose
+
+```bash
+# Copy environment file
+cp .env.example .env
+# Update .env with your actual values
+
+# Start the application
+docker-compose up --build
+```
+
+### Kubernetes Deployment
+
+```bash
+# For development (with bind mounts and hot reload)
+helm install todo-app ./k8s/helm -f k8s/helm/values.dev.yaml
+
+# For production
+helm install todo-app ./k8s/helm
+```
+
+## 🤖 AI Chatbot Features
+
+The application includes an AI-powered chatbot that understands natural language commands:
+
+### Supported Commands
+
+- **English**: "Add task: buy groceries", "Show my tasks", "Mark task 1 as complete"
+- **Roman Urdu**: "Task bnao: submit assignment", "Mere tasks dikhao", "Task 1 complete kro"
+
+### API Endpoints
+
+- **Chat Endpoint**: `POST /api/chat/message`
+- **Swagger UI**: `GET /docs`
+
+## 🐛 Troubleshooting
+
+If you encounter issues:
+
+1. **Chatbot errors**: Check the [Chatbot Troubleshooting Guide](CHATBOT_TROUBLESHOOTING.md)
+2. **Database connection**: Verify your Neon database URL in `.env`
+3. **Kubernetes**: Use `kubectl logs -f deployment/backend-deployment -n todo-app` to check logs
 
 ## Development Guidelines
 
 This project follows spec-driven development methodology. All implementations should reference the specifications in the `/specs` directory. When implementing new features, follow the established patterns and maintain consistency with the existing architecture.
+
+## 🚀 Deployment
+
+The application is designed for containerized deployment with:
+
+- **Docker Compose**: For local development and testing
+- **Kubernetes**: For production deployment with Helm charts
+- **Neon Database**: Serverless PostgreSQL for automatic scaling
+- **Auto-scaling**: Horizontal Pod Autoscalers for dynamic scaling

@@ -21,12 +21,15 @@ if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./todo_dev.db"
     logging.warning("DATABASE_URL not set, using SQLite for development")
 
-# Convert to async URL for asyncpg if using PostgreSQL
+# Convert to async URL for appropriate async drivers
 if DATABASE_URL.startswith("postgresql://"):
     ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
     ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("?sslmode=require", "")
+elif DATABASE_URL.startswith("sqlite:///"):
+    # For SQLite, use aiosqlite driver
+    ASYNC_DATABASE_URL = DATABASE_URL.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
 else:
-    # For SQLite, use the same URL
+    # For other cases, keep the same URL
     ASYNC_DATABASE_URL = DATABASE_URL
 
 # Import all models so they are registered with SQLModel
@@ -36,23 +39,44 @@ from app.models.conversation import ConversationMessage, ConversationSession
 from app.models.user import User
 
 # Create async engine for SQLModel
-async_engine = create_async_engine(
-    ASYNC_DATABASE_URL,
-    echo=True,
-    # Add connect_args only for PostgreSQL
-    connect_args={"ssl": "require"} if DATABASE_URL.startswith("postgresql://") else {}
-)
+if ASYNC_DATABASE_URL.startswith("sqlite+aiosqlite"):
+    # For SQLite, use aiosqlite driver
+    async_engine = create_async_engine(
+        ASYNC_DATABASE_URL,
+        echo=True,
+        connect_args={"check_same_thread": False}  # Needed for SQLite
+    )
+else:
+    # For PostgreSQL, use asyncpg driver with proper connection settings
+    async_engine = create_async_engine(
+        ASYNC_DATABASE_URL,
+        echo=True,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        pool_timeout=30,
+        pool_reset_on_return='commit',
+        connect_args={
+            "server_settings": {
+                "application_name": "todo-app",
+            },
+            "command_timeout": 60,
+        }
+    )
 
 
 async def init_db() -> None:
     """Initialize database tables."""
+    print("Initializing database tables...")
     async with async_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+    print("Database tables initialized successfully!")
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """Get async database session dependency."""
-    async with AsyncSession(async_engine) as session:
+    async with AsyncSession(async_engine, expire_on_commit=False) as session:
         try:
             yield session
         finally:

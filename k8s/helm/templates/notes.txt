@@ -20,10 +20,10 @@ You can access your application at:
 APPLICATION ACCESS:
 ------------------
 Get the application URL by running these commands:
-  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "todo-app.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
-  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
-  echo "Visit http://127.0.0.1:8080 to use your application"
-  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+  echo "Frontend Service: kubectl --namespace {{ .Release.Namespace }} get svc {{ include "todo-app.frontend.fullname" . }}"
+  echo "Backend Service: kubectl --namespace {{ .Release.Namespace }} get svc {{ include "todo-app.backend.fullname" . }}"
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "todo-app.frontend.fullname" . }} 3000:3000 &
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "todo-app.backend.fullname" . }} 8000:8000 &
 {{- end }}
 
 CONFIGURATION:

@@ -91,6 +91,8 @@ backend:
         secretKeyRef:
           name: todo-app-secrets
           key: BETTER_AUTH_SECRET
+    - name: ENVIRONMENT
+      value: "production"
 
 # Frontend configuration
 frontend:
@@ -178,6 +180,12 @@ global:
   storageClass: ""
   appEnv: "production"
   logLevel: "info"
+
+# Global service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
 
 # Secrets configuration
 secrets:

@@ -42,12 +42,21 @@ spec:
               protocol: TCP
           env:
             {{- range .Values.backend.env }}
+            {{- if .valueFrom }}
             - name: {{ .name }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .valueFrom.secretKeyRef.name }}
                   key: {{ .valueFrom.secretKeyRef.key }}
+            {{- else }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
             {{- end }}
+            {{- end }}
+          {{- if .Values.backend.volumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.backend.volumeMounts | nindent 12 }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /health
@@ -66,6 +75,10 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- if .Values.backend.volumes }}
+      volumes:
+        {{- toYaml .Values.backend.volumes | nindent 8 }}
+      {{- end }}
       {{- with .Values.backend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

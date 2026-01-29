@@ -38,7 +38,9 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup."""
+    print("Starting up application...")
     await init_db()
+    print("Application started successfully!")
 
 
 app.include_router(todos_router)
