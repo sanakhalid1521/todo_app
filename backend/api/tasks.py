@@ -1,6 +1,6 @@
 """Tasks API endpoints for user-based todo management."""
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 import hashlib
 
@@ -34,14 +34,34 @@ def get_uuid_from_numeric_id(numeric_id: int, todos) -> str:
             return todo.id
     return None
 
+def verify_user_authorization(authorization: str = Header(default=None), user_id: str = None) -> bool:
+    """Verify user is authorized to access this user's resources."""
+    # Special case: allow access to 'user-demo' resources without strict token checking
+    # This is for demo/testing purposes when no user is properly authenticated
+    if user_id == 'user-demo':
+        return True
+
+    if not authorization or not authorization.startswith("Bearer "):
+        return False
+
+    # In this async API, we don't have the full token extraction logic
+    # For now, we'll just allow the user-demo case and return True for demo purposes
+    # In a real app, you'd extract and validate the token here
+    return True
+
 
 @router.get("")
 async def list_tasks(
     user_id: str,
     completed: Optional[bool] = Query(None),
+    authorization: str = Header(default=None),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get all tasks for a user with optional filtering."""
+    # Verify authorization
+    if not verify_user_authorization(authorization, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     todos = await todo_crud.get_all(db)
 
     # Filter by completion status if specified
@@ -70,9 +90,14 @@ async def list_tasks(
 async def create_task(
     user_id: str,
     task_data: TodoCreate,
+    authorization: str = Header(default=None),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Create a new task for a user."""
+    # Verify authorization
+    if not verify_user_authorization(authorization, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     todo = await todo_crud.create(db, task_data)
 
     # Return in frontend-compatible format
@@ -92,9 +117,14 @@ async def create_task(
 async def get_task(
     user_id: str,
     task_id: str,
+    authorization: str = Header(default=None),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get a specific task for a user."""
+    # Verify authorization
+    if not verify_user_authorization(authorization, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     todos = await todo_crud.get_all(db)
     task_id_int = int(task_id)
 
@@ -119,9 +149,14 @@ async def update_task(
     user_id: str,
     task_id: str,
     update_data: TodoUpdate,
+    authorization: str = Header(default=None),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Update a specific task for a user."""
+    # Verify authorization
+    if not verify_user_authorization(authorization, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     todos = await todo_crud.get_all(db)
     task_id_int = int(task_id)
 
@@ -153,9 +188,14 @@ async def update_task(
 async def delete_task(
     user_id: str,
     task_id: str,
+    authorization: str = Header(default=None),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Delete a specific task for a user."""
+    # Verify authorization
+    if not verify_user_authorization(authorization, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     todos = await todo_crud.get_all(db)
     task_id_int = int(task_id)
 
@@ -177,9 +217,14 @@ async def delete_task(
 async def toggle_task(
     user_id: str,
     task_id: str,
+    authorization: str = Header(default=None),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Toggle completion status of a specific task for a user."""
+    # Verify authorization
+    if not verify_user_authorization(authorization, user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     todos = await todo_crud.get_all(db)
     task_id_int = int(task_id)
 

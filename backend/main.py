@@ -9,7 +9,7 @@ load_dotenv()
 from api.todos import router as todos_router
 from app.routers.tasks import router as tasks_router
 from api.auth import router as auth_router
-from database import init_db
+from app.database import init_db
 
 # Conditionally import chat router to avoid dependency issues
 try:

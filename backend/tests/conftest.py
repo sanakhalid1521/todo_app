@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from backend.database import get_async_session
 from backend.main import app
-from backend.models.todo import Todo
+from sqlmodel import SQLModel
 
 
 # Create sync test engine (for TestClient)
@@ -28,8 +28,8 @@ TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_eng
 @pytest.fixture(scope="function")
 def db_session() -> Generator[Session, None, None]:
     """Create a fresh database session for each test."""
-    # Create tables
-    Todo.metadata.create_all(bind=test_engine)
+    # Create tables - use SQLModel's metadata which includes all registered models
+    SQLModel.metadata.create_all(bind=test_engine)
 
     session = TestSessionLocal()
     try:
@@ -37,7 +37,7 @@ def db_session() -> Generator[Session, None, None]:
     finally:
         session.close()
         # Drop tables after test
-        Todo.metadata.drop_all(bind=test_engine)
+        SQLModel.metadata.drop_all(bind=test_engine)
 
 
 @pytest.fixture(scope="function")
@@ -56,19 +56,21 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def sample_todo_data() -> dict:
-    """Sample todo data for tests."""
+def sample_task_data() -> dict:
+    """Sample task data for tests."""
     return {
+        "user_id": "test-user-1234-5678-abcd-ef1234567890",
         "title": "Buy Milk",
         "description": "Whole milk, 2 liters from the store",
     }
 
 
 @pytest.fixture
-def sample_todo_data_with_id() -> dict:
-    """Sample todo data with ID."""
+def sample_task_data_with_id() -> dict:
+    """Sample task data with ID."""
     return {
-        "id": "test-uuid-1234-5678-abcd-ef1234567890",
+        "id": 1,  # Auto-generated int ID for the Task model
+        "user_id": "test-user-1234-5678-abcd-ef1234567890",
         "title": "Buy Milk",
         "description": "Whole milk, 2 liters from the store",
         "completed": False,

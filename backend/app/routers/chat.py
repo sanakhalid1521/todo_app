@@ -5,7 +5,7 @@ from typing import Optional, List
 import uuid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import get_async_session
+from app.database import get_async_session
 from app.services.conversations import ConversationService
 from app.models.conversation import ConversationRole
 from app.agents.todo_agent import todo_agent

@@ -48,6 +48,20 @@ async def get_tasks(
             detail="Not authorized"
         )
 
+    # Special case: if using demo user, ensure the user exists in the database
+    if user_id == 'user-demo':
+        # Check if demo user exists, create if not
+        from app.models.user import User
+        demo_user = db.query(User).filter(User.id == user_id).first()
+        if not demo_user:
+            demo_user = User(
+                id=user_id,
+                email="demo@example.com",
+                password_hash="",  # Empty hash for demo user
+            )
+            db.add(demo_user)
+            db.commit()
+
     tasks = db.query(Task).filter(Task.user_id == user_id).all()
     return tasks
 
@@ -65,6 +79,20 @@ async def create_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized"
         )
+
+    # Special case: if using demo user, ensure the user exists in the database
+    if user_id == 'user-demo':
+        # Check if demo user exists, create if not
+        from app.models.user import User
+        demo_user = db.query(User).filter(User.id == user_id).first()
+        if not demo_user:
+            demo_user = User(
+                id=user_id,
+                email="demo@example.com",
+                password_hash="",  # Empty hash for demo user
+            )
+            db.add(demo_user)
+            db.commit()
 
     task = Task(
         user_id=user_id,
@@ -93,6 +121,20 @@ async def get_task(
             detail="Not authorized"
         )
 
+    # Special case: if using demo user, ensure the user exists in the database
+    if user_id == 'user-demo':
+        # Check if demo user exists, create if not
+        from app.models.user import User
+        demo_user = db.query(User).filter(User.id == user_id).first()
+        if not demo_user:
+            demo_user = User(
+                id=user_id,
+                email="demo@example.com",
+                password_hash="",  # Empty hash for demo user
+            )
+            db.add(demo_user)
+            db.commit()
+
     task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 
     if not task:
@@ -118,6 +160,20 @@ async def update_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized"
         )
+
+    # Special case: if using demo user, ensure the user exists in the database
+    if user_id == 'user-demo':
+        # Check if demo user exists, create if not
+        from app.models.user import User
+        demo_user = db.query(User).filter(User.id == user_id).first()
+        if not demo_user:
+            demo_user = User(
+                id=user_id,
+                email="demo@example.com",
+                password_hash="",  # Empty hash for demo user
+            )
+            db.add(demo_user)
+            db.commit()
 
     task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 
@@ -152,6 +208,20 @@ async def delete_task(
             detail="Not authorized"
         )
 
+    # Special case: if using demo user, ensure the user exists in the database
+    if user_id == 'user-demo':
+        # Check if demo user exists, create if not
+        from app.models.user import User
+        demo_user = db.query(User).filter(User.id == user_id).first()
+        if not demo_user:
+            demo_user = User(
+                id=user_id,
+                email="demo@example.com",
+                password_hash="",  # Empty hash for demo user
+            )
+            db.add(demo_user)
+            db.commit()
+
     task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 
     if not task:
@@ -177,6 +247,20 @@ async def toggle_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized"
         )
+
+    # Special case: if using demo user, ensure the user exists in the database
+    if user_id == 'user-demo':
+        # Check if demo user exists, create if not
+        from app.models.user import User
+        demo_user = db.query(User).filter(User.id == user_id).first()
+        if not demo_user:
+            demo_user = User(
+                id=user_id,
+                email="demo@example.com",
+                password_hash="",  # Empty hash for demo user
+            )
+            db.add(demo_user)
+            db.commit()
 
     task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 

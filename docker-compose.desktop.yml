@@ -31,11 +31,11 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/todo_app
-      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-your-32-character-secret-key-here}
+      - BETTER_AUTH_SECRET=your-32-character-secret-key-here
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION_DAYS=7
       - CORS_ORIGINS=http://localhost:3001,http://frontend:3000
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-your-openai-key-here}
+      - OPENAI_API_KEY=your-openai-key-here
     volumes:
       # Bind mount for live code reloading
       - ./backend:/app
@@ -67,7 +67,7 @@ services:
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
       - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
-      - NEXT_PUBLIC_AUTH_SECRET=${BETTER_AUTH_SECRET:-your-32-character-secret-key-here}
+      - NEXT_PUBLIC_AUTH_SECRET=your-32-character-secret-key-here
       - NODE_ENV=development
     depends_on:
       - backend

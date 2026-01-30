@@ -3,6 +3,7 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime, timezone
+from app.models.user import User
 
 
 class Task(SQLModel, table=True):

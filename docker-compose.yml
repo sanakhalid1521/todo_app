@@ -1,63 +1,81 @@
-version: '3.8'
-
 services:
-  # Backend Server
+  # Backend Server with Neon database
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: todo-app-backend
+      context: .
+      dockerfile: backend/Dockerfile.dev
+    container_name: todo-app-backend-dev
     platform: linux/amd64
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-sqlite:///./todo_app.db}
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-your-32-character-secret-key-here}
-      JWT_ALGORITHM: HS256
-      JWT_EXPIRATION_DAYS: 7
-      CORS_ORIGINS: http://localhost:3000,http://frontend:3000
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-key-here}
-      ENVIRONMENT: development
+      - DATABASE_URL=postgresql://neondb_owner:npg_Ge0rDskgW9VF@ep-dry-tree-adewdlhc-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - BETTER_AUTH_SECRET=your-very-secure-32-character-secret-key-here-12345
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_DAYS=7
+      - CORS_ORIGINS=http://localhost:3001,http://frontend:3000
+      - OPENAI_API_KEY=your-openai-api-key-here
     volumes:
+      # Bind mount for live code reloading
       - ./backend:/app
-      - /app/.venv
+      # Mount .env file to use Neon database
+      - ./backend/.env:/app/.env
+    working_dir: /app
     networks:
       - todo-network
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "info"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    command: >
+      sh -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        python -c \"from app.database import init_db; import asyncio; asyncio.run(init_db()); print('Database initialized')\" &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app
+      "
 
-  # Frontend Server
+  # Frontend Server with bind mounts for development
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: todo-app-frontend
+      dockerfile: Dockerfile.dev
+    container_name: todo-app-frontend-dev
     platform: linux/amd64
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-      - NEXT_PUBLIC_AUTH_SECRET=${BETTER_AUTH_SECRET:-your-32-character-secret-key-here}
-      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_BASE_URL=http://backend:8000
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
+      - NEXT_PUBLIC_AUTH_SECRET=your-very-secure-32-character-secret-key-here-12345
+      - NODE_ENV=development
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
+    volumes:
+      # Bind mount individual directories for live code reloading (excluding root files to avoid overwriting startup.sh)
+      - ./frontend/app:/app/app
+      - ./frontend/components:/app/components
+      - ./frontend/public:/app/public
+      - ./frontend/hooks:/app/hooks
+      - ./frontend/lib:/app/lib
+      - ./frontend/context:/app/context
+      - ./frontend/schemas:/app/schemas
+      # Mount individual config files
+      - ./frontend/.env:/app/.env
+      - ./frontend/.env.local:/app/.env.local
+      - ./frontend/.gitignore:/app/.gitignore
+      - ./frontend/eslint.config.mjs:/app/eslint.config.mjs
+      - ./frontend/next.config.ts:/app/next.config.ts
+      - ./frontend/next-env.d.ts:/app/next-env.d.ts
+      - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
+      - ./frontend/README.md:/app/README.md
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/vercel.json:/app/vercel.json
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/package-lock.json:/app/package-lock.json
+      # Mount node_modules to avoid conflicts
+      - /app/node_modules
+    working_dir: /app
     networks:
       - todo-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-volumes:
-  todo_db_volume:
+    # Override the command to run the startup script content directly
+    command: sh -c "rm -f .next/cache/lock* && npm run dev"
 
 networks:
   todo-network:

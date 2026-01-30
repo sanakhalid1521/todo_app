@@ -9,7 +9,7 @@ from openai import OpenAI
 from app.mcp.tools import MCP_TOOLS
 import httpx
 import asyncio
-from database import get_async_session
+from app.database import get_async_session
 from app.models.task import Task
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,9 @@ class TodoAgent:
     def __init__(self):
         self._client = None  # Lazy initialization
         self.tools = MCP_TOOLS
-        self.has_api_key = bool(os.getenv("OPENAI_API_KEY"))
+        api_key = os.getenv("OPENAI_API_KEY")
+        # Check if API key is set and not a placeholder
+        self.has_api_key = bool(api_key and api_key != "your-openai-api-key-here" and "your-" not in api_key and api_key.strip() != "")
 
     @property
     def client(self):
@@ -29,7 +31,12 @@ class TodoAgent:
             if not api_key:
                 # Return a mock client when API key is not available
                 return None
-            self._client = OpenAI(api_key=api_key)
+            try:
+                # Initialize OpenAI client
+                self._client = OpenAI(api_key=api_key)
+            except Exception as e:
+                print(f"Error initializing OpenAI client: {e}")
+                return None
         return self._client
 
     async def process_message(self, message: str, user_id: str, conversation_history: List[Dict[str, str]] = None) -> str:

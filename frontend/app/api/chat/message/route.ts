@@ -5,8 +5,9 @@ export async function POST(request: NextRequest) {
     // Get the request body
     const body = await request.json();
 
-    // Forward the request to the backend chat API
-    const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/message`, {
+    // Forward the request to the backend chat API - use BACKEND_URL if API_URL is not set
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    const backendResponse = await fetch(`${backendUrl}/api/chat/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

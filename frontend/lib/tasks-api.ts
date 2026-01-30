@@ -2,7 +2,7 @@
  * Tasks API client for managing user tasks
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export interface Task {
   id: number;
@@ -82,53 +82,74 @@ class TasksAPI {
 
   async listTasks(): Promise<Task[]> {
     // Get user ID from auth system
-    const { getUserId } = await import('./auth');
+    const { getUserId, getToken } = await import('./auth');
     const userId = getUserId() || 'user-demo';
-    return this.request<Task[]>(`/api/${encodeURIComponent(userId)}/tasks`);
+    const token = getToken();
+
+    // Use the authenticated API with proper headers
+    return this.request<Task[]>(`/api/${encodeURIComponent(userId)}/tasks`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
   }
 
   async getTask(taskId: number): Promise<Task> {
     // Get user ID from auth system
-    const { getUserId } = await import('./auth');
+    const { getUserId, getToken } = await import('./auth');
     const userId = getUserId() || 'user-demo';
-    return this.request<Task>(`/api/${encodeURIComponent(userId)}/tasks/${taskId}`);
+    const token = getToken();
+
+    return this.request<Task>(`/api/${encodeURIComponent(userId)}/tasks/${taskId}`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
   }
 
   async createTask(data: CreateTaskRequest): Promise<Task> {
     // Get user ID from auth system
-    const { getUserId } = await import('./auth');
+    const { getUserId, getToken } = await import('./auth');
     const userId = getUserId() || 'user-demo';
+    const token = getToken();
+
     return this.request<Task>(`/api/${encodeURIComponent(userId)}/tasks`, {
       method: 'POST',
       body: JSON.stringify(data),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     });
   }
 
   async updateTask(taskId: number, data: UpdateTaskRequest): Promise<Task> {
     // Get user ID from auth system
-    const { getUserId } = await import('./auth');
+    const { getUserId, getToken } = await import('./auth');
     const userId = getUserId() || 'user-demo';
+    const token = getToken();
+
     return this.request<Task>(`/api/${encodeURIComponent(userId)}/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     });
   }
 
   async deleteTask(taskId: number): Promise<{ success: boolean }> {
     // Get user ID from auth system
-    const { getUserId } = await import('./auth');
+    const { getUserId, getToken } = await import('./auth');
     const userId = getUserId() || 'user-demo';
+    const token = getToken();
+
     return this.request<{ success: boolean }>(`/api/${encodeURIComponent(userId)}/tasks/${taskId}`, {
       method: 'DELETE',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     });
   }
 
   async toggleComplete(taskId: number): Promise<Task> {
     // Get user ID from auth system
-    const { getUserId } = await import('./auth');
+    const { getUserId, getToken } = await import('./auth');
     const userId = getUserId() || 'user-demo';
+    const token = getToken();
+
     return this.request<Task>(`/api/${encodeURIComponent(userId)}/tasks/${taskId}/toggle`, {
       method: 'PATCH',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     });
   }
 }
