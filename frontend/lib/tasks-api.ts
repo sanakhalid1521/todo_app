@@ -12,17 +12,26 @@ export interface Task {
   completed: boolean;
   created_at: string;
   updated_at: string;
+  category: "work" | "personal" | "shopping" | "health" | "other";
+  priority: "low" | "medium" | "high" | "urgent";
+  due_date?: string; // Optional field for due date
 }
 
 export interface CreateTaskRequest {
   title: string;
   description?: string;
+  category?: "work" | "personal" | "shopping" | "health" | "other";
+  priority?: "low" | "medium" | "high" | "urgent";
+  due_date?: string; // Optional field for due date
 }
 
 export interface UpdateTaskRequest {
   title?: string;
   description?: string;
   completed?: boolean;
+  category?: "work" | "personal" | "shopping" | "health" | "other";
+  priority?: "low" | "medium" | "high" | "urgent";
+  due_date?: string; // Optional field for due date
 }
 
 class TasksAPI {

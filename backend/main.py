@@ -9,6 +9,7 @@ load_dotenv()
 from api.todos import router as todos_router
 from app.routers.tasks import router as tasks_router
 from api.auth import router as auth_router
+from app.routers.sse import router as sse_router
 from app.database import init_db
 
 # Conditionally import chat router to avoid dependency issues
@@ -46,6 +47,7 @@ async def startup_event():
 app.include_router(todos_router)
 app.include_router(tasks_router)
 app.include_router(auth_router)
+app.include_router(sse_router)  # Server-Sent Events router
 if CHAT_AVAILABLE:
     app.include_router(chat_router)
 

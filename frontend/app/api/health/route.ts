@@ -31,7 +31,7 @@ export async function GET() {
     return NextResponse.json(
       {
         status: 'error',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       },
       { status: 500 }

@@ -5,6 +5,7 @@ import Chatbot from "@/components/Chatbot";
 import { ModalProvider } from "@/context/ModalContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { SearchProvider } from "@/context/SearchContext";
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
   title: "TodoPro | Manage tasks efficiently",
